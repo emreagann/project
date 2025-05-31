@@ -106,7 +106,7 @@ if uploaded_file := st.file_uploader("Upload your Excel file", type=["xlsx"]):
     df_results = pd.DataFrame({
         "Alternative": alternatives,
         "Score": scores
-    }).sort_values("Score", ascending=False)
+    })
 
     st.subheader("MABAC T2 Neutrosophic Results")
     st.dataframe(df_results)
