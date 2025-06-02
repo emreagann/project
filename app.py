@@ -37,13 +37,8 @@ if input_method == "Excel Upload":
         alternatives = df_raw.columns[1:].tolist()
         data_raw = df_raw.iloc[:, 1:].values
         weights = [float(str(w).replace(',', '.')) for w in df_info["Weight"]]
-
-        types = []
-        st.subheader("Select Criterion Type (Benefit or Cost)")
-        for crit in criteria:
-            t = st.selectbox(f"{crit}:", ["benefit", "cost"], key=crit)
-            types.append(t)
-
+        types = [t.strip().lower() for t in df_info["Type"]]
+                
       
 
         X = np.array([[convert_range_to_mean(cell) for cell in row] for row in data_raw], dtype=float)
