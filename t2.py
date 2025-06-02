@@ -8,11 +8,11 @@ class T2NeutrosophicNumber:
         return f"T2N(truth={self.truth:.3f}, indeterminacy={self.indeterminacy:.3f}, falsity={self.falsity:.3f})"
 
     def __add__(self, other):
-        return T2NeutrosophicNumber(
-            self.truth + other.truth - self.truth * other.truth,
-            self.indeterminacy * other.indeterminacy,
-            self.falsity * other.falsity
-        )
+      return T2NeutrosophicNumber(
+        self.truth + other.truth,
+        self.indeterminacy + other.indeterminacy,
+        self.falsity + other.falsity
+      )
 
 
     def __mul__(self, other):
