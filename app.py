@@ -4,52 +4,83 @@ import numpy as np
 import matplotlib.pyplot as plt
 from t2 import T2NeutrosophicNumber, classic_to_t2n
 
-st.title("T2 Neutrosophic MABAC for Ship Fuel Selection")
+st.title("T2 Neutrosophic MABAC for Decision Making")
 
+st.subheader("Select a method to enter data")
+input_method = st.radio("How to enter data?", ["Excel Upload", "Manual Entry"])
+
+proceed = False
+criteria, alternatives, weights, types, X = [], [], [], [], None
 def convert_range_to_mean(value):
-    if pd.isna(value):
-        return np.nan
-    if isinstance(value, str) and ('-' in value or '–' in value):
-        value = value.replace('–', '-')
-        parts = value.split('-')
-        try:
-            nums = [float(p.replace(',', '.')) for p in parts]
-            return sum(nums) / len(nums)
-        except:
-            return np.nan
-    else:
-        try:
-            return float(str(value).replace(',', '.').replace(' ', ''))
-        except:
-            return np.nan
-
-if uploaded_file := st.file_uploader("Upload your Excel file", type=["xlsx"]):
-
-    df_raw = pd.read_excel(uploaded_file, sheet_name=0, header=1)
-    try:
+            if pd.isna(value):
+                return np.nan
+            if isinstance(value, str) and ('-' in value or '–' in value):
+                value = value.replace('–', '-')
+                parts = value.split('-')
+                try:
+                    nums = [float(p.replace(',', '.')) for p in parts]
+                    return sum(nums) / len(nums)
+                except:
+                    return np.nan
+            else:
+                try:
+                    return float(str(value).replace(',', '.').replace(' ', ''))
+                except:
+                    return np.nan
+if input_method == "Excel Upload":
+    uploaded_file = st.file_uploader("Upload your Excel file", type=["xlsx"])
+    if uploaded_file:
+        df_raw = pd.read_excel(uploaded_file, sheet_name=0, header=1)
         df_info = pd.read_excel(uploaded_file, sheet_name=1)
-    except:
-        st.stop()
 
-    criteria = df_raw.iloc[:, 0].tolist()
-    alternatives = df_raw.columns[1:].tolist()
-
-    types = []
-    st.subheader("Select Criterion Type (Benefit or Cost)")
-    for crit in criteria:
-        t = st.selectbox(f"{crit}:", ["benefit", "cost"], key=crit)
-        types.append(t)
-
-    try:
+        criteria = df_raw.iloc[:, 0].tolist()
+        alternatives = df_raw.columns[1:].tolist()
+        data_raw = df_raw.iloc[:, 1:].values
         weights = [float(str(w).replace(',', '.')) for w in df_info["Weight"]]
-    except:
-        st.stop()
 
-    data_raw = df_raw.iloc[:, 1:].values
-    X = np.array([[convert_range_to_mean(cell) for cell in row] for row in data_raw], dtype=float)
+        types = []
+        st.subheader("Select Criterion Type (Benefit or Cost)")
+        for crit in criteria:
+            t = st.selectbox(f"{crit}:", ["benefit", "cost"], key=crit)
+            types.append(t)
 
-    st.subheader("Raw Data (converted ranges to means)")
-    st.dataframe(pd.DataFrame(X, index=criteria, columns=alternatives))
+      
+
+        X = np.array([[convert_range_to_mean(cell) for cell in row] for row in data_raw], dtype=float)
+        proceed = True
+
+elif input_method == "Manual Entry":
+    num_criteria = st.number_input("Number of criteria", min_value=1, step=1, format="%d")
+    num_alternatives = st.number_input("Number of alternatives", min_value=1, step=1, format="%d")
+
+    alternatives = []
+    st.subheader("Enter Alternative Names")
+    for j in range(num_alternatives):
+        alt = st.text_input(f"Alternative {j+1} Name", key=f"alt_{j}")
+        alternatives.append(alt)
+
+    criteria, types, weights = [], [], []
+    st.subheader("Enter Criteria")
+    for i in range(num_criteria):
+        crit = st.text_input(f"Criterion {i+1} Name", key=f"crit_{i}")
+        criteria.append(crit)
+        c_type = st.selectbox(f"{crit} type", ["benefit", "cost"], key=f"type_{i}")
+        types.append(c_type)
+        weight = st.number_input(f"{crit} weight", min_value=0.0, max_value=1.0, step=0.001, format="%.3f", key=f"weight_{i}")
+        weights.append(weight)
+
+    st.subheader("Enter Criterion Performance Values")
+    X = np.zeros((num_criteria, num_alternatives))
+    for i in range(num_criteria):
+        for j in range(num_alternatives):
+            val_str = st.text_input(f"Value of {criteria[i]} for {alternatives[j]}", key=f"val_{i}_{j}")
+            X[i, j] = convert_range_to_mean(val_str)
+
+    proceed = True
+
+if proceed:
+    st.subheader("Decision Matrix (Performance Values)")
+    st.dataframe(pd.DataFrame(X, index=criteria, columns=alternatives),width=350,height=250)
 
     X_norm = np.zeros_like(X)
     for j in range(len(criteria)):
@@ -116,3 +147,17 @@ if uploaded_file := st.file_uploader("Upload your Excel file", type=["xlsx"]):
     ax.set_ylabel("Score")
     ax.set_title("Alternatives Comparison")
     st.pyplot(fig)
+
+    st.subheader("Optional: View Intermediate Matrices")
+
+    if st.checkbox("Show V Matrix"):
+        df_v = pd.DataFrame([[str(cell) for cell in row] for row in V], index=alternatives, columns=criteria)
+        st.dataframe(df_v)
+
+    if st.checkbox("Show G Vector"):
+        df_g = pd.DataFrame([str(gj) for gj in g], index=criteria, columns=["G Value"])
+        st.dataframe(df_g)
+
+    if st.checkbox("Show Q Matrix"):
+        df_q = pd.DataFrame([[str(cell) for cell in row] for row in Q], index=alternatives, columns=criteria)
+        st.dataframe(df_q)
