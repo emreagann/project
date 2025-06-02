@@ -80,7 +80,7 @@ elif input_method == "Manual Entry":
 
 if proceed:
     st.subheader("Decision Matrix (Performance Values)")
-    st.dataframe(pd.DataFrame(X, index=criteria, columns=alternatives),width=350,height=300)
+    st.dataframe(pd.DataFrame(X, index=criteria, columns=alternatives),width=400,height=250)
 
     X_norm = np.zeros_like(X)
     for j in range(len(criteria)):
