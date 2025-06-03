@@ -11,20 +11,16 @@ input_method = st.radio("How to enter data?", ["Excel Upload", "Manual Entry"])
 proceed = False
 criteria, alternatives, weights, types, X = [], [], [], [], None
 
+
 def detect_structure(df):
-    first_col = df.iloc[:, 0]
-    other_cols = df.iloc[:, 1:]
-    
-    if all(isinstance(x, str) for x in first_col) and all(other_cols.applymap(lambda x: isinstance(x, (int, float))).all()):
+    col_is_str = df.iloc[:, 0].apply(lambda x: isinstance(x, str)).sum()
+    row_is_str = df.iloc[0, :].apply(lambda x: isinstance(x, str)).sum()
+    if col_is_str > row_is_str:
         return 'alternatives_in_rows'
-    
-    first_row = df.iloc[0, :]
-    other_rows = df.iloc[1:, :]
-    
-    if all(isinstance(x, str) for x in first_row) and all(other_rows.applymap(lambda x: isinstance(x, (int, float))).all().all()):
+    elif row_is_str > col_is_str:
         return 'alternatives_in_columns'
-    
-    return 'unknown'
+    else:
+        return 'unknown'
 
 def convert_range_to_mean(value):
     if pd.isna(value):
@@ -43,42 +39,53 @@ def convert_range_to_mean(value):
         except:
             return np.nan
 
+def extract_excel_data(df_raw, df_info):
+    structure = detect_structure(df_raw)
+    if structure == 'alternatives_in_rows':
+        criteria = df_raw.iloc[0, 1:].tolist()
+        alternatives = df_raw.iloc[1:, 0].tolist()
+        data_raw = df_raw.iloc[1:, 1:].values
+    elif structure == 'alternatives_in_columns':
+        alternatives = df_raw.columns[1:].tolist()
+        criteria = df_raw.iloc[1:, 0].tolist()
+        data_raw = df_raw.iloc[1:, 1:].values.T
+    else:
+        raise ValueError("Unknown data structure in Excel.")
+
+    if "Type" in df_info.columns:
+        types = [str(t).strip().lower() for t in df_info["Type"].dropna()]
+    else:
+        raise ValueError("Excel info sheet must contain a 'Type' column.")
+
+    weight_columns = [col for col in df_info.columns if str(col).strip().lower().startswith("c")]
+    weight_row = df_info.iloc[0]
+    weights = []
+    for col in weight_columns:
+        val = weight_row[col]
+        try:
+            weights.append(float(str(val).replace(",", ".")))
+        except:
+            weights.append(0.0)
+
+    X = np.array([[convert_range_to_mean(cell) for cell in row] for row in data_raw], dtype=float)
+    return criteria, alternatives, weights, types, X, structure
+
+
+
 if input_method == "Excel Upload":
     uploaded_file = st.file_uploader("Upload your Excel file", type=["xlsx"])
     if uploaded_file:
         df_raw = pd.read_excel(uploaded_file, sheet_name=0, header=None)
         df_info = pd.read_excel(uploaded_file, sheet_name=1)
 
-        structure = detect_structure(df_raw)
-        st.write("Detected structure:", structure)
-
-        if structure == 'alternatives_in_rows':
-            criteria = df_raw.iloc[0, 1:].tolist()
-            alternatives = df_raw.iloc[1:, 0].tolist()
-            data_raw = df_raw.iloc[1:, 1:].values
-        elif structure == 'alternatives_in_columns':
-            alternatives = df_raw.columns[1:].tolist()
-            criteria = df_raw.iloc[1:, 0].tolist()
-            data_raw = df_raw.iloc[1:, 1:].values.T
-        else:
-            st.error("Unknown data structure. Please check your Excel file.")
+        try:
+            criteria, alternatives, weights, types, X, structure = extract_excel_data(df_raw, df_info)
+            st.success(f"Detected structure: {structure}")
+            proceed = True
+        except Exception as e:
+            st.error(f"Error: {e}")
             proceed = False
 
-        if "Type" in df_info.columns:
-            types = [str(t).strip().lower() for t in df_info["Type"].dropna()]
-
-        weight_columns = [col for col in df_info.columns if str(col).strip().lower().startswith("C")]
-        weight_row = df_info.iloc[0]
-        weights = []
-        for col in weight_columns:
-            val = weight_row[col]
-            try:
-                weights.append(float(str(val).replace(",", ".")))
-            except:
-                weights.append(0.0)
-
-        X = np.array([[convert_range_to_mean(cell) for cell in row] for row in data_raw], dtype=float)
-        proceed = True
 
 elif input_method == "Manual Entry":
     num_criteria = st.number_input("Number of criteria", min_value=1, step=1, format="%d")
@@ -115,10 +122,12 @@ elif input_method == "Manual Entry":
 
     proceed = True
 
+
 if proceed:
     st.subheader("Decision Matrix (Performance Values)")
     st.dataframe(pd.DataFrame(X, index=criteria, columns=alternatives), width=400, height=250)
 
+    # Normalize
     X_norm = np.zeros_like(X)
     for j in range(len(criteria)):
         col = X[j, :]
@@ -197,5 +206,4 @@ if proceed:
 
     if st.checkbox("Show Q Matrix"):
         df_q = pd.DataFrame([[str(cell) for cell in row] for row in Q], index=alternatives, columns=criteria)
-        st.dataframe(df_q)  # düzeltildi
-
+        st.dataframe(df_q)
