@@ -51,18 +51,18 @@ if input_method == "Excel Upload":
 
     structure = detect_structure(df_raw)
 
-     if structure == 'alternatives_in_rows':
+    if structure == 'alternatives_in_rows':
         criteria = df_raw.columns[1:].tolist()
         alternatives = df_raw.iloc[:, 0].tolist()
         data_raw = df_raw.iloc[:, 1:].values
 
-     elif structure == 'alternatives_in_columns':
+    elif structure == 'alternatives_in_columns':
         alternatives = df_raw.columns[1:].tolist()
         criteria = df_raw.iloc[:, 0].tolist()
         data_raw = df_raw.iloc[:, 1:].values
         data_raw = data_raw.T
 
-     if "Type" in df_info.columns:
+    if "Type" in df_info.columns:
         types = [str(t).strip().lower() for t in df_info["Type"].dropna()]
 
     weight_columns = [col for col in df_info.columns if str(col).strip().lower().startswith("c")]
