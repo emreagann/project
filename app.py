@@ -46,6 +46,8 @@ def convert_range_to_mean(value):
 if input_method == "Excel Upload":
     uploaded_file = st.file_uploader("Upload your Excel file", type=["xlsx"])
     if uploaded_file:
+        X = np.array([[convert_range_to_mean(cell) for cell in row] for row in data_raw], dtype=float)
+        proceed = True 
         df_raw = pd.read_excel(uploaded_file, sheet_name=0, header=None)
         df_info = pd.read_excel(uploaded_file, sheet_name=1)
 
@@ -75,8 +77,7 @@ if input_method == "Excel Upload":
             except:
                 weights.append(0.0)
 
-        X = np.array([[convert_range_to_mean(cell) for cell in row] for row in data_raw], dtype=float)
-        proceed = True 
+       
 
 elif input_method == "Manual Entry":
     num_criteria = st.number_input("Number of criteria", min_value=1, step=1, format="%d")
