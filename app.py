@@ -25,6 +25,7 @@ def detect_structure(df):
         return 'alternatives_in_columns'
     
     return 'unknown'
+
 def convert_range_to_mean(value):
     if pd.isna(value):
         return np.nan
@@ -78,6 +79,7 @@ if input_method == "Excel Upload":
 
         X = np.array([[convert_range_to_mean(cell) for cell in row] for row in data_raw], dtype=float)
         proceed = True
+
 elif input_method == "Manual Entry":
     num_criteria = st.number_input("Number of criteria", min_value=1, step=1, format="%d")
     num_alternatives = st.number_input("Number of alternatives", min_value=1, step=1, format="%d")
@@ -98,12 +100,18 @@ elif input_method == "Manual Entry":
         weight = st.number_input(f"{crit} weight", min_value=0.0, max_value=1.0, step=0.001, format="%.3f", key=f"weight_{i}")
         weights.append(weight)
 
+    if not np.isclose(sum(weights), 1.0):
+        st.warning("Warning: Sum of weights is not 1. Consider normalizing them.")
+
     st.subheader("Enter Criterion Performance Values")
     X = np.zeros((num_criteria, num_alternatives))
     for i in range(num_criteria):
         for j in range(num_alternatives):
             val_str = st.text_input(f"Value of {criteria[i]} for {alternatives[j]}", key=f"val_{i}_{j}")
-            X[i, j] = convert_range_to_mean(val_str)
+            try:
+                X[i, j] = convert_range_to_mean(val_str)
+            except:
+                X[i, j] = 0.0
 
     proceed = True
 
@@ -124,13 +132,10 @@ if proceed:
             else:
                 X_norm[j, :] = (max_val - col) / (max_val - min_val)
     X_norm = np.nan_to_num(X_norm)
+
     X_t2n = [[classic_to_t2n(X_norm[j, i]) for j in range(len(criteria))] for i in range(len(alternatives))]
     weights_t2n = [classic_to_t2n(w, indeterminacy=0.1) for w in weights]
-    print(f"len(X_t2n) = {len(X_t2n)}")
-    for idx, row in enumerate(X_t2n):
-     print(f"len(X_t2n[{idx}]) = {len(row)}")
-    print(f"len(weights_t2n) = {len(weights_t2n)}")
-    print(f"len(alternatives) = {len(alternatives)}, len(criteria) = {len(criteria)}")
+
     V = []
     for i in range(len(alternatives)):
         row = []
@@ -192,4 +197,5 @@ if proceed:
 
     if st.checkbox("Show Q Matrix"):
         df_q = pd.DataFrame([[str(cell) for cell in row] for row in Q], index=alternatives, columns=criteria)
-        st.dataframe(df_q)
+        st.dataframe(df_q)  # düzeltildi
+
