@@ -26,13 +26,23 @@ def convert_range_to_mean(value):
 uploaded_file = st.file_uploader("Upload your Excel file", type=["xlsx"])
 
 if uploaded_file:
-    df_raw = pd.read_excel(uploaded_file, sheet_name=0, header=1)
+    df_raw = pd.read_excel(uploaded_file, sheet_name=0, header=None)
+    
+    first_row_refs, first_col_refs = detect_excel_references(df_raw)
+    
+    if first_row_refs:
+        header_row = 1
+    else:
+        header_row = 0
+    
+    df_raw = pd.read_excel(uploaded_file, sheet_name=0, header=header_row)
+    
     try:
         df_info = pd.read_excel(uploaded_file, sheet_name=1)
     except:
         st.error("Not founded.")
         st.stop()
-
+    
     criteria = df_raw.iloc[:, 0].tolist()
     alternatives = df_raw.columns[1:].tolist()
 
