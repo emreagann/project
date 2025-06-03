@@ -2,15 +2,29 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import re
 from t2 import T2NeutrosophicNumber, classic_to_t2n
 
 st.title("T2 Neutrosophic MABAC for Decision Making")
-
 st.subheader("Select a method to enter data")
 input_method = st.radio("How to enter data?", ["Excel Upload", "Manual Entry"])
 
 proceed = False
 criteria, alternatives, weights, types, X = [], [], [], [], None
+
+def detect_structure(df):
+    sample_rows = df.iloc[:3, 0].astype(str).tolist()
+    sample_cols = df.columns[:3].astype(str).tolist()
+    alt_in_rows = any(re.match(r"A\d+", x) for x in sample_rows)
+    alt_in_cols = any(re.match(r"A\d+", x) for x in sample_cols)
+    crit_in_rows = any(re.match(r"C\d+", x) for x in sample_rows)
+    crit_in_cols = any(re.match(r"C\d+", x) for x in sample_cols)
+
+    if alt_in_rows and crit_in_cols:
+        return 'alternatives_in_rows'
+    elif alt_in_cols and crit_in_rows:
+        return 'alternatives_in_columns'
+    return 'unknown'
 
 def convert_range_to_mean(value):
     if pd.isna(value):
@@ -32,21 +46,35 @@ def convert_range_to_mean(value):
 if input_method == "Excel Upload":
     uploaded_file = st.file_uploader("Upload your Excel file", type=["xlsx"])
     if uploaded_file:
-        df_raw = pd.read_excel(uploaded_file, sheet_name=0, header=1)
+        df_raw = pd.read_excel(uploaded_file, sheet_name=0, header=None)
         df_info = pd.read_excel(uploaded_file, sheet_name=1)
 
-        
-        criteria = df_raw.iloc[:, 0].tolist()
-        alternatives = df_raw.columns[1:].tolist()
-        data_raw = df_raw.iloc[:, 1:].values
+        structure = detect_structure(df_raw)
+
+        if structure == 'alternatives_in_rows':
+            criteria = df_raw.columns[1:].tolist()
+            alternatives = df_raw.iloc[:, 0].tolist()
+            data_raw = df_raw.iloc[:, 1:].values
+
+        elif structure == 'alternatives_in_columns':
+            alternatives = df_raw.columns[1:].tolist()
+            criteria = df_raw.iloc[:, 0].tolist()
+            data_raw = df_raw.iloc[:, 1:].values
+            # Veriyi transpoze et
+            data_raw = data_raw.T
+
+        else:
+            st.error("Could not detect structure. Please check your Excel format.")
+            proceed = False
 
         if "Type" in df_info.columns:
             types = [str(t).strip().lower() for t in df_info["Type"].dropna()]
         else:
-           st.error();
+            st.error("Second sheet must contain 'Type' column.")
+            proceed = False
 
         weight_columns = [col for col in df_info.columns if str(col).strip().lower().startswith("c")]
-        weight_row = df_info.iloc[0] 
+        weight_row = df_info.iloc[0]
         weights = []
         for col in weight_columns:
             val = weight_row[col]
@@ -56,7 +84,6 @@ if input_method == "Excel Upload":
                 weights.append(0.0)
 
         X = np.array([[convert_range_to_mean(cell) for cell in row] for row in data_raw], dtype=float)
-
         proceed = True
 
 
