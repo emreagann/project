@@ -76,7 +76,7 @@ if input_method == "Excel Upload":
         except:
             weights.append(0.0)
 
-     X = np.array([[convert_range_to_mean(cell) for cell in row] for row in data_raw], dtype=float)  # Burada artık data_raw var
+     X = np.array([[convert_range_to_mean(cell) for cell in row] for row in data_raw], dtype=float)
      proceed = True
 
 elif input_method == "Manual Entry":
