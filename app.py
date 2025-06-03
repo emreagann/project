@@ -1,4 +1,3 @@
-@@ -0,0 +1,120 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -98,7 +97,6 @@ if uploaded_file := st.file_uploader("Upload your Excel file", type=["xlsx"]):
             row.append(t2n_sub(V[i][j], g[j]))
         Q.append(row)
 
-    # --- Skorlar ---
     scores = []
     for i in range(len(alternatives)):
         total = T2NeutrosophicNumber(0, 0, 0)
