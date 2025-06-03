@@ -49,7 +49,7 @@ if uploaded_file:
 
 
     data_raw = df_raw.iloc[:, 1:].values
-    X = np.array([[convert_range_to_mean(cell) for cell in row] for row in data_raw], dtype=float).T
+    X = np.array([[convert_range_to_mean(cell) for cell in row] for row in data_raw], dtype=float)
 
 else:
     st.subheader("Manual data entry")
