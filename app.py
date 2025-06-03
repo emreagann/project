@@ -62,7 +62,6 @@ if input_method == "Excel Upload":
             data_raw = df_raw.iloc[:, 1:].values
             data_raw = data_raw.T
 
-
         if "Type" in df_info.columns:
             types = [str(t).strip().lower() for t in df_info["Type"].dropna()]
 
@@ -77,8 +76,7 @@ if input_method == "Excel Upload":
                 weights.append(0.0)
 
         X = np.array([[convert_range_to_mean(cell) for cell in row] for row in data_raw], dtype=float)
-        proceed = True
-
+        proceed = True 
 
 elif input_method == "Manual Entry":
     num_criteria = st.number_input("Number of criteria", min_value=1, step=1, format="%d")
