@@ -3,9 +3,22 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from t2 import T2NeutrosophicNumber, classic_to_t2n
+import re
 
 st.title("T2 Neutrosophic MABAC for Ship Fuel Selection")
-
+def detect_excel_references(df):
+    def is_excel_ref(s):
+        if not isinstance(s, str):
+            return False
+        return bool(re.match(r"^[A-Z]+[0-9]+$", s.strip().upper()))
+    
+    first_row = df.iloc[0, 1:]
+    first_col = df.iloc[1:, 0]
+    
+    first_row_refs = all(is_excel_ref(x) for x in first_row)
+    first_col_refs = all(is_excel_ref(x) for x in first_col)
+    
+    return first_row_refs, first_col_refs
 def convert_range_to_mean(value):
     if pd.isna(value):
         return np.nan
