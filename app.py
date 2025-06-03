@@ -106,7 +106,7 @@ if proceed:
                 X_norm[j, :] = (max_val - col) / (max_val - min_val)
     X_norm = np.nan_to_num(X_norm)
 
-    X_t2n = [[classic_to_t2n(X_norm[i, j]) for j in range(len(criteria))] for i in range(len(alternatives))]
+    X_t2n = [[classic_to_t2n(X_norm[j, i]) for j in range(len(criteria))] for i in range(len(alternatives))]
     weights_t2n = [classic_to_t2n(w, indeterminacy=0.1) for w in weights]
     V = []
     for i in range(len(alternatives)):
