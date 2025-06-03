@@ -35,27 +35,30 @@ if input_method == "Excel Upload":
         df_raw = pd.read_excel(uploaded_file, sheet_name=0, header=1)
         df_info = pd.read_excel(uploaded_file, sheet_name=1)
 
+        
         criteria = df_raw.iloc[:, 0].tolist()
         alternatives = df_raw.columns[1:].tolist()
         data_raw = df_raw.iloc[:, 1:].values
 
-        weights = []
-      if 'Criterias' in df_info.columns:
-        mask = df_info['Criterias'].dropna().astype(str).str.strip().str.lower() == 'criteria weights:'
-        weights_row = df_info[mask]
-        if not weights_row.empty:
-         weights_row = weights_row.iloc[0] 
-         weight_columns = [col for col in df_info.columns if str(col).strip().lower().startswith('c')]
-         weight_values = weights_row[weight_columns].values.flatten()
-         weights = [float(str(w).replace(',', '.')) for w in weight_values]
+        if "Type" in df_info.columns:
+            types = [str(t).strip().lower() for t in df_info["Type"].dropna()]
         else:
-         weights = []
+            st.error("Excel dosyasında 'Type' sütunu eksik.")
 
-        types = [str(t).strip().lower() for t in df_info["Type"]]
+        weight_columns = [col for col in df_info.columns if str(col).strip().lower().startswith("c")]
+        weight_row = df_info.iloc[0]  # ilk satır: başlıklar varsayımı
+        weights = []
+        for col in weight_columns:
+            val = weight_row[col]
+            try:
+                weights.append(float(str(val).replace(",", ".")))
+            except:
+                weights.append(0.0)
 
         X = np.array([[convert_range_to_mean(cell) for cell in row] for row in data_raw], dtype=float)
 
         proceed = True
+
 
 elif input_method == "Manual Entry":
     num_criteria = st.number_input("Number of criteria", min_value=1, step=1, format="%d")
