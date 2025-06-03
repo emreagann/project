@@ -40,18 +40,16 @@ if input_method == "Excel Upload":
         data_raw = df_raw.iloc[:, 1:].values
 
         weights = []
-        if 'Criterias' in df_info.columns:
-            mask = df_info['Criterias'].dropna().astype(str).str.strip().str.lower() == 'criteria weights:'
-            weights_row = df_info[mask]
-            if not weights_row.empty:
-                weights_row = weights_row.iloc[0]  # İlk eşleşme
-                weight_columns = [col for col in df_info.columns if str(col).strip().lower().startswith('c')]
-                weight_values = weights_row[weight_columns].values.flatten()
-                weights = [float(str(w).replace(',', '.')) for w in weight_values]
-            else:
-                weights = []
+      if 'Criterias' in df_info.columns:
+        mask = df_info['Criterias'].dropna().astype(str).str.strip().str.lower() == 'criteria weights:'
+        weights_row = df_info[mask]
+        if not weights_row.empty:
+         weights_row = weights_row.iloc[0] 
+         weight_columns = [col for col in df_info.columns if str(col).strip().lower().startswith('c')]
+         weight_values = weights_row[weight_columns].values.flatten()
+         weights = [float(str(w).replace(',', '.')) for w in weight_values]
         else:
-            weights = []
+         weights = []
 
         types = [str(t).strip().lower() for t in df_info["Type"]]
 
