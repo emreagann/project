@@ -42,11 +42,11 @@ if input_method == "Excel Upload":
 
         if "Type" in df_info.columns:
             types = [str(t).strip().lower() for t in df_info["Type"].dropna()]
-        else:
-            st.error("Excel dosyasında 'Type' sütunu eksik.")
+        else
+           st.error();
 
         weight_columns = [col for col in df_info.columns if str(col).strip().lower().startswith("c")]
-        weight_row = df_info.iloc[0]  # ilk satır: başlıklar varsayımı
+        weight_row = df_info.iloc[0] 
         weights = []
         for col in weight_columns:
             val = weight_row[col]
