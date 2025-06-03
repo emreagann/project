@@ -105,13 +105,13 @@ if proceed:
             else:
                 X_norm[j, :] = (max_val - col) / (max_val - min_val)
     X_norm = np.nan_to_num(X_norm)
+    X_t2n = [[classic_to_t2n(X_norm[j, i]) for j in range(len(criteria))] for i in range(len(alternatives))]
+    weights_t2n = [classic_to_t2n(w, indeterminacy=0.1) for w in weights]
     print(f"len(X_t2n) = {len(X_t2n)}")
     for idx, row in enumerate(X_t2n):
      print(f"len(X_t2n[{idx}]) = {len(row)}")
     print(f"len(weights_t2n) = {len(weights_t2n)}")
     print(f"len(alternatives) = {len(alternatives)}, len(criteria) = {len(criteria)}")
-    X_t2n = [[classic_to_t2n(X_norm[j, i]) for j in range(len(criteria))] for i in range(len(alternatives))]
-    weights_t2n = [classic_to_t2n(w, indeterminacy=0.1) for w in weights]
     V = []
     for i in range(len(alternatives)):
         row = []
