@@ -171,7 +171,7 @@ df_g = pd.DataFrame(
 df_g.columns = ["G (T2N Avg)"]
 st.dataframe(df_g)
 
-st.subheader("🔹 Difference Matrix Q = V - G")
+st.subheader("Difference Matrix Q = V - G")
 df_q = pd.DataFrame(
     [[str(cell) for cell in row] for row in Q],
     columns=criteria,
