@@ -45,7 +45,6 @@ if uploaded_file := st.file_uploader("Upload your Excel file", type=["xlsx"]):
     except:
         st.stop()
 
-    # --- Verileri işle ---
     data_raw = df_raw.iloc[:, 1:].values
     X = np.array([[convert_range_to_mean(cell) for cell in row] for row in data_raw], dtype=float)
 
