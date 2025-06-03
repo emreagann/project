@@ -176,7 +176,8 @@ df_results = pd.DataFrame({
 
 st.subheader("Original Decision Matrix (Performance Values)")
 df_original = pd.DataFrame(X, index=alternatives, columns=criteria)
-st.dataframe(df_original.style.format("{:.4f}"))
+st.dataframe(df_original.fillna(0).style.format("{:.4f}"))
+
 
 
 st.subheader("MABAC T2 Neutrosophic Final Results")
@@ -192,7 +193,7 @@ df_g = pd.DataFrame(
     {criteria[j]: [f"T: {round(g[j].truth, 3)} | I: {round(g[j].indeterminacy, 3)} | F: {round(g[j].falsity, 3)}"] for j in range(len(criteria))}
 ).T
 df_g.columns = ["G (T2N Avg)"]
-st.dataframe(df_g)
+st.dataframe(df_g.fillna(''))
 
 st.subheader("Difference Matrix Q = V - G")
 df_q = pd.DataFrame(
@@ -200,4 +201,4 @@ df_q = pd.DataFrame(
     columns=criteria,
     index=alternatives
 )
-st.dataframe(df_q)
+st.dataframe(df_q.fillna(''))
