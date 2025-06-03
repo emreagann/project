@@ -45,39 +45,38 @@ def convert_range_to_mean(value):
 
 if input_method == "Excel Upload":
     uploaded_file = st.file_uploader("Upload your Excel file", type=["xlsx"])
-    if uploaded_file:
-        X = np.array([[convert_range_to_mean(cell) for cell in row] for row in data_raw], dtype=float)
-        proceed = True 
-        df_raw = pd.read_excel(uploaded_file, sheet_name=0, header=None)
-        df_info = pd.read_excel(uploaded_file, sheet_name=1)
+   if uploaded_file:
+    df_raw = pd.read_excel(uploaded_file, sheet_name=0, header=None)
+    df_info = pd.read_excel(uploaded_file, sheet_name=1)
 
-        structure = detect_structure(df_raw)
+    structure = detect_structure(df_raw)
 
-        if structure == 'alternatives_in_rows':
-            criteria = df_raw.columns[1:].tolist()
-            alternatives = df_raw.iloc[:, 0].tolist()
-            data_raw = df_raw.iloc[:, 1:].values
+    if structure == 'alternatives_in_rows':
+        criteria = df_raw.columns[1:].tolist()
+        alternatives = df_raw.iloc[:, 0].tolist()
+        data_raw = df_raw.iloc[:, 1:].values
 
-        elif structure == 'alternatives_in_columns':
-            alternatives = df_raw.columns[1:].tolist()
-            criteria = df_raw.iloc[:, 0].tolist()
-            data_raw = df_raw.iloc[:, 1:].values
-            data_raw = data_raw.T
+    elif structure == 'alternatives_in_columns':
+        alternatives = df_raw.columns[1:].tolist()
+        criteria = df_raw.iloc[:, 0].tolist()
+        data_raw = df_raw.iloc[:, 1:].values
+        data_raw = data_raw.T
 
-        if "Type" in df_info.columns:
-            types = [str(t).strip().lower() for t in df_info["Type"].dropna()]
+    if "Type" in df_info.columns:
+        types = [str(t).strip().lower() for t in df_info["Type"].dropna()]
 
-        weight_columns = [col for col in df_info.columns if str(col).strip().lower().startswith("c")]
-        weight_row = df_info.iloc[0]
-        weights = []
-        for col in weight_columns:
-            val = weight_row[col]
-            try:
-                weights.append(float(str(val).replace(",", ".")))
-            except:
-                weights.append(0.0)
+    weight_columns = [col for col in df_info.columns if str(col).strip().lower().startswith("c")]
+    weight_row = df_info.iloc[0]
+    weights = []
+    for col in weight_columns:
+        val = weight_row[col]
+        try:
+            weights.append(float(str(val).replace(",", ".")))
+        except:
+            weights.append(0.0)
 
-       
+    X = np.array([[convert_range_to_mean(cell) for cell in row] for row in data_raw], dtype=float)  # Burada artık data_raw var
+    proceed = True
 
 elif input_method == "Manual Entry":
     num_criteria = st.number_input("Number of criteria", min_value=1, step=1, format="%d")
