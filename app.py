@@ -60,11 +60,10 @@ if input_method == "Excel Upload":
             alternatives = df_raw.columns[1:].tolist()
             criteria = df_raw.iloc[:, 0].tolist()
             data_raw = df_raw.iloc[:, 1:].values
-            # Veriyi transpoze et
             data_raw = data_raw.T
 
         else:
-            st.error("Could not detect structure. Please check your Excel format.")
+            st.error;
             proceed = False
 
         if "Type" in df_info.columns:
