@@ -29,7 +29,7 @@ class T2NeutrosophicNumber:
         )
 
     def score(self):
-        return self.truth - self.falsity
+           return (self.truth + (1 - self.falsity) - self.indeterminacy) / 2
 
 
 def classic_to_t2n(value, indeterminacy=0.1):
