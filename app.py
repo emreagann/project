@@ -13,19 +13,19 @@ proceed = False
 criteria, alternatives, weights, types, X = [], [], [], [], None
 
 def detect_structure(df):
-    sample_rows = df.iloc[:3, 0].astype(str).tolist()
-    sample_cols = df.columns[:3].astype(str).tolist()
-    alt_in_rows = any(re.match(r"A\d+", x) for x in sample_rows)
-    alt_in_cols = any(re.match(r"A\d+", x) for x in sample_cols)
-    crit_in_rows = any(re.match(r"C\d+", x) for x in sample_rows)
-    crit_in_cols = any(re.match(r"C\d+", x) for x in sample_cols)
-
-    if alt_in_rows and crit_in_cols:
+    first_col = df.iloc[:, 0]
+    other_cols = df.iloc[:, 1:]
+    
+    if all(isinstance(x, str) for x in first_col) and all(other_cols.applymap(lambda x: isinstance(x, (int, float))).all()):
         return 'alternatives_in_rows'
-    elif alt_in_cols and crit_in_rows:
+    
+    first_row = df.iloc[0, :]
+    other_rows = df.iloc[1:, :]
+    
+    if all(isinstance(x, str) for x in first_row) and all(other_rows.applymap(lambda x: isinstance(x, (int, float))).all().all()):
         return 'alternatives_in_columns'
+    
     return 'unknown'
-
 def convert_range_to_mean(value):
     if pd.isna(value):
         return np.nan
