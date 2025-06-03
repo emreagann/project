@@ -197,8 +197,8 @@ st.dataframe(df_g.fillna(''))
 
 st.subheader("Difference Matrix Q = V - G")
 df_q = pd.DataFrame(
-    [[str(cell) for cell in row] for row in Q],
+    [[str(cell) if cell is not None else '' for cell in row] for row in Q],
     columns=criteria,
     index=alternatives
 )
-st.dataframe(df_q.fillna(''))
+st.dataframe(df_q)
