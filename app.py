@@ -36,17 +36,23 @@ if input_method == "Excel Upload":
         criteria = df_raw.iloc[:, 0].tolist()
         alternatives = df_raw.columns[1:].tolist()
         data_raw = df_raw.iloc[:, 1:].values
-        weights_row = df_info[df_info['Criterias'].str.strip().str.lower() == 'criteria weights:']
-        weight_columns = [col for col in df_info.columns if col.startswith('C')]
-        weight_values = weights_row[weight_columns].values.flatten()
-        weights = [float(str(w).replace(',', '.')) for w in weight_values]
-
-        types = [t.strip().lower() for t in df_info["Type"]]
-                
+       if 'Criterias' in df_info.columns:
       
-
-        X = np.array([[convert_range_to_mean(cell) for cell in row] for row in data_raw], dtype=float)
-        proceed = True
+          mask = df_info['Criterias'].dropna().astype(str).str.strip().str.lower() == 'criteria weights:'
+          weights_row = df_info[mask]
+        if not weights_row.empty:
+         weights_row = weights_row.iloc[0]  # İlk eşleşme
+         weight_columns = [col for col in df_info.columns if str(col).strip().lower().startswith('c')]
+         weights = weights_row[weight_columns].tolist()
+        else:
+        weights = []
+       else:
+        weights = []
+  weight_values = weights_row[weight_columns].values.flatten()
+  weights = [float(str(w).replace(',', '.')) for w in weight_values]
+  types = [t.strip().lower() for t in df_info["Type"]]
+  X = np.array([[convert_range_to_mean(cell) for cell in row] for row in data_raw], dtype=float)
+  proceed = True
 
 elif input_method == "Manual Entry":
     num_criteria = st.number_input("Number of criteria", min_value=1, step=1, format="%d")
