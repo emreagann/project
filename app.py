@@ -36,7 +36,10 @@ if input_method == "Excel Upload":
         criteria = df_raw.iloc[:, 0].tolist()
         alternatives = df_raw.columns[1:].tolist()
         data_raw = df_raw.iloc[:, 1:].values
-        weights = [float(str(w).replace(',', '.')) for w in df_info["Weight"]]
+        weight_columns = [col for col in df_info.columns if col.startswith('C')]
+        weight_values = weights_row[weight_columns].values.flatten()
+        weights = [float(str(w).replace(',', '.')) for w in weight_values]
+
         types = [t.strip().lower() for t in df_info["Type"]]
                 
       
