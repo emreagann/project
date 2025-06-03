@@ -201,4 +201,3 @@ df_q = pd.DataFrame(
     index=alternatives
 )
 st.dataframe(df_q)
-st.write(f"Alternatives detected: {alternatives}")
