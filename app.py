@@ -11,22 +11,24 @@ input_method = st.radio("How to enter data?", ["Excel Upload", "Manual Entry"])
 
 proceed = False
 criteria, alternatives, weights, types, X = [], [], [], [], None
+
 def convert_range_to_mean(value):
-            if pd.isna(value):
-                return np.nan
-            if isinstance(value, str) and ('-' in value or '–' in value):
-                value = value.replace('–', '-')
-                parts = value.split('-')
-                try:
-                    nums = [float(p.replace(',', '.')) for p in parts]
-                    return sum(nums) / len(nums)
-                except:
-                    return np.nan
-            else:
-                try:
-                    return float(str(value).replace(',', '.').replace(' ', ''))
-                except:
-                    return np.nan
+    if pd.isna(value):
+        return np.nan
+    if isinstance(value, str) and ('-' in value or '–' in value):
+        value = value.replace('–', '-')
+        parts = value.split('-')
+        try:
+            nums = [float(p.replace(',', '.')) for p in parts]
+            return sum(nums) / len(nums)
+        except:
+            return np.nan
+    else:
+        try:
+            return float(str(value).replace(',', '.').replace(' ', ''))
+        except:
+            return np.nan
+
 if input_method == "Excel Upload":
     uploaded_file = st.file_uploader("Upload your Excel file", type=["xlsx"])
     if uploaded_file:
@@ -36,23 +38,26 @@ if input_method == "Excel Upload":
         criteria = df_raw.iloc[:, 0].tolist()
         alternatives = df_raw.columns[1:].tolist()
         data_raw = df_raw.iloc[:, 1:].values
-       if 'Criterias' in df_info.columns:
-      
-          mask = df_info['Criterias'].dropna().astype(str).str.strip().str.lower() == 'criteria weights:'
-          weights_row = df_info[mask]
-        if not weights_row.empty:
-         weights_row = weights_row.iloc[0]  # İlk eşleşme
-         weight_columns = [col for col in df_info.columns if str(col).strip().lower().startswith('c')]
-         weights = weights_row[weight_columns].tolist()
+
+        weights = []
+        if 'Criterias' in df_info.columns:
+            mask = df_info['Criterias'].dropna().astype(str).str.strip().str.lower() == 'criteria weights:'
+            weights_row = df_info[mask]
+            if not weights_row.empty:
+                weights_row = weights_row.iloc[0]  # İlk eşleşme
+                weight_columns = [col for col in df_info.columns if str(col).strip().lower().startswith('c')]
+                weight_values = weights_row[weight_columns].values.flatten()
+                weights = [float(str(w).replace(',', '.')) for w in weight_values]
+            else:
+                weights = []
         else:
-        weights = []
-       else:
-        weights = []
-  weight_values = weights_row[weight_columns].values.flatten()
-  weights = [float(str(w).replace(',', '.')) for w in weight_values]
-  types = [t.strip().lower() for t in df_info["Type"]]
-  X = np.array([[convert_range_to_mean(cell) for cell in row] for row in data_raw], dtype=float)
-  proceed = True
+            weights = []
+
+        types = [str(t).strip().lower() for t in df_info["Type"]]
+
+        X = np.array([[convert_range_to_mean(cell) for cell in row] for row in data_raw], dtype=float)
+
+        proceed = True
 
 elif input_method == "Manual Entry":
     num_criteria = st.number_input("Number of criteria", min_value=1, step=1, format="%d")
@@ -85,7 +90,7 @@ elif input_method == "Manual Entry":
 
 if proceed:
     st.subheader("Decision Matrix (Performance Values)")
-    st.dataframe(pd.DataFrame(X, index=criteria, columns=alternatives),width=400,height=250)
+    st.dataframe(pd.DataFrame(X, index=criteria, columns=alternatives), width=400, height=250)
 
     X_norm = np.zeros_like(X)
     for j in range(len(criteria)):
@@ -103,10 +108,12 @@ if proceed:
 
     X_t2n = [[classic_to_t2n(X_norm[j, i]) for j in range(len(criteria))] for i in range(len(alternatives))]
     weights_t2n = [classic_to_t2n(w, indeterminacy=0.1) for w in weights]
+
     st.write("criteria:", criteria)
     st.write("len(criteria):", len(criteria))
     st.write("weights_t2n:", weights_t2n)
     st.write("len(weights_t2n):", len(weights_t2n))
+
     V = []
     for i in range(len(alternatives)):
         row = []
