@@ -181,7 +181,7 @@ st.dataframe(df_original.fillna(0).style.format("{:.4f}"))
 
 
 st.subheader("MABAC T2 Neutrosophic Final Results")
-st.dataframe(df_results)
+st.dataframe(df_results.fillna(0))
 
 fig, ax = plt.subplots()
 ax.bar(df_results["Alternative"], df_results["Score"], color="green")
