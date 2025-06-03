@@ -164,7 +164,7 @@ ax.bar(df_results["Alternative"], df_results["Score"], color="green")
 ax.set_ylabel("Score")
 ax.set_title("Alternatives Comparison")
 st.pyplot(fig)
-st.subheader("🔹 Border Approximation G (Average Neutrosophic Value)")
+st.subheader("Border Approximation G (Average Neutrosophic Value)")
 df_g = pd.DataFrame(
     {criteria[j]: [f"T: {round(g[j].truth, 3)} | I: {round(g[j].indeterminacy, 3)} | F: {round(g[j].falsity, 3)}"] for j in range(len(criteria))}
 ).T
