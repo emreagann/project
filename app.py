@@ -62,15 +62,9 @@ if input_method == "Excel Upload":
             data_raw = df_raw.iloc[:, 1:].values
             data_raw = data_raw.T
 
-        else:
-            st.error;
-            proceed = False
 
         if "Type" in df_info.columns:
             types = [str(t).strip().lower() for t in df_info["Type"].dropna()]
-        else:
-            st.error("Second sheet must contain 'Type' column.")
-            proceed = False
 
         weight_columns = [col for col in df_info.columns if str(col).strip().lower().startswith("c")]
         weight_row = df_info.iloc[0]
