@@ -50,6 +50,7 @@ if input_method == "Excel Upload":
      df_info = pd.read_excel(uploaded_file, sheet_name=1)
 
      structure = detect_structure(df_raw)
+     st.write("Detected structure:", structure)
 
      if structure == 'alternatives_in_rows':
         criteria = df_raw.columns[1:].tolist()
