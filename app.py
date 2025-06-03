@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import re
 from t2 import T2NeutrosophicNumber, classic_to_t2n
 
 st.title("T2 Neutrosophic MABAC for Decision Making")
