@@ -14,6 +14,12 @@ class T2NeutrosophicNumber:
             self.falsity * other.falsity
         )
 
+    def __sub__(self, other):
+        return T2NeutrosophicNumber(
+            max(0, self.truth - other.truth),
+            max(0, self.indeterminacy - other.indeterminacy),
+            max(0, self.falsity - other.falsity)
+        )
 
     def __mul__(self, other):
         return T2NeutrosophicNumber(
@@ -25,7 +31,8 @@ class T2NeutrosophicNumber:
     def score(self):
         return self.truth - self.falsity
 
-def classic_to_t2n(value, indeterminacy=0.1):
 
-   
-    return T2NeutrosophicNumber(truth=value, indeterminacy=indeterminacy, falsity=1-value)
+def classic_to_t2n(value, indeterminacy=0.1):
+    truth = min(max(value, 0), 1)
+    falsity = min(max(1 - value, 0), 1)
+    return T2NeutrosophicNumber(truth=truth, indeterminacy=indeterminacy, falsity=falsity)
