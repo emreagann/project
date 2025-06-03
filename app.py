@@ -178,6 +178,3 @@ df_q = pd.DataFrame(
     index=alternatives
 )
 st.dataframe(df_q)
-st.write("X shape:", X.shape)
-st.write("Alternatives:", alternatives)
-st.write("Criteria:", criteria)
