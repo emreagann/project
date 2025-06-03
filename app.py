@@ -42,7 +42,7 @@ if input_method == "Excel Upload":
 
         if "Type" in df_info.columns:
             types = [str(t).strip().lower() for t in df_info["Type"].dropna()]
-        else
+        else:
            st.error();
 
         weight_columns = [col for col in df_info.columns if str(col).strip().lower().startswith("c")]
