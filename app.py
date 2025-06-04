@@ -159,7 +159,7 @@ df_results = pd.DataFrame({
     "Score": scores
 })
 
-
+df_results_sorted = df_results.sort_values(by="Score", ascending=False).reset_index(drop=True)
 
 st.subheader("Original Decision Matrix (Performance Values)")
 df_original = pd.DataFrame(X, index=alternatives, columns=criteria)
@@ -167,10 +167,10 @@ st.dataframe(df_original.style.format("{:.4f}"))
 
 
 st.subheader("MABAC T2 Neutrosophic Final Results")
-st.dataframe(df_results)
+st.dataframe(df_results_sorted.style.format({"Score": "{:.4f}"}))
 
 fig, ax = plt.subplots()
-ax.bar(df_results["Alternative"], df_results["Score"], color="green")
+ax.bar(df_results_sorted["Alternative"], df_results_sorted["Score"], color="green")
 ax.set_ylabel("Score")
 ax.set_title("Alternatives Comparison")
 st.pyplot(fig)
