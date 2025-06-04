@@ -3,22 +3,9 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from t2 import T2NeutrosophicNumber, classic_to_t2n
-import re
 
 st.title("T2 Neutrosophic MABAC for Ship Fuel Selection")
-def detect_excel_references(df):
-    def is_excel_ref(s):
-        if not isinstance(s, str):
-            return False
-        return bool(re.match(r"^[A-Z]+[0-9]+$", s.strip().upper()))
-    
-    first_row = df.iloc[0, 1:]
-    first_col = df.iloc[1:, 0]
-    
-    first_row_refs = all(is_excel_ref(x) for x in first_row)
-    first_col_refs = all(is_excel_ref(x) for x in first_col)
-    
-    return first_row_refs, first_col_refs
+
 def convert_range_to_mean(value):
     if pd.isna(value):
         return np.nan
@@ -39,23 +26,13 @@ def convert_range_to_mean(value):
 uploaded_file = st.file_uploader("Upload your Excel file", type=["xlsx"])
 
 if uploaded_file:
-    df_raw = pd.read_excel(uploaded_file, sheet_name=0, header=None)
-    
-    first_row_refs, first_col_refs = detect_excel_references(df_raw)
-    
-    if first_row_refs:
-        header_row = 1
-    else:
-        header_row = 0
-    
-    df_raw = pd.read_excel(uploaded_file, sheet_name=0, header=header_row)
-    
+    df_raw = pd.read_excel(uploaded_file, sheet_name=0, header=1)
     try:
         df_info = pd.read_excel(uploaded_file, sheet_name=1)
     except:
         st.error("Not founded.")
         st.stop()
-    
+
     criteria = df_raw.iloc[:, 0].tolist()
     alternatives = df_raw.columns[1:].tolist()
 
@@ -72,7 +49,7 @@ if uploaded_file:
 
 
     data_raw = df_raw.iloc[:, 1:].values
-    X = np.array([[convert_range_to_mean(cell) for cell in row] for row in data_raw.T], dtype=float)
+    X = np.array([[convert_range_to_mean(cell) for cell in row] for row in data_raw], dtype=float).T
 
 else:
     st.subheader("Manual data entry")
@@ -176,12 +153,11 @@ df_results = pd.DataFrame({
 
 st.subheader("Original Decision Matrix (Performance Values)")
 df_original = pd.DataFrame(X, index=alternatives, columns=criteria)
-st.dataframe(df_original.fillna(0).style.format("{:.4f}"))
-
+st.dataframe(df_original.style.format("{:.4f}"))
 
 
 st.subheader("MABAC T2 Neutrosophic Final Results")
-st.dataframe(df_results.fillna(0))
+st.dataframe(df_results)
 
 fig, ax = plt.subplots()
 ax.bar(df_results["Alternative"], df_results["Score"], color="green")
@@ -193,11 +169,11 @@ df_g = pd.DataFrame(
     {criteria[j]: [f"T: {round(g[j].truth, 3)} | I: {round(g[j].indeterminacy, 3)} | F: {round(g[j].falsity, 3)}"] for j in range(len(criteria))}
 ).T
 df_g.columns = ["G (T2N Avg)"]
-st.dataframe(df_g.fillna(''))
+st.dataframe(df_g)
 
 st.subheader("Difference Matrix Q = V - G")
 df_q = pd.DataFrame(
-    [[str(cell) if cell is not None else '' for cell in row] for row in Q],
+    [[str(cell) for cell in row] for row in Q],
     columns=criteria,
     index=alternatives
 )
