@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from t2 import T2NeutrosophicNumber, classic_to_t2n
-
+from scipy.stats import gmean
 st.title("T2 Neutrosophic MABAC for Ship Fuel Selection")
 
 def convert_range_to_mean(value):
@@ -132,9 +132,12 @@ for i in range(len(alternatives)):
 
 g = []
 for j in range(len(criteria)):
-    sum_t = np.mean([V[i][j].truth for i in range(len(alternatives))])
-    sum_i = np.mean([V[i][j].indeterminacy for i in range(len(alternatives))])
-    sum_f = np.mean([V[i][j].falsity for i in range(len(alternatives))])
+    truth_values = [V[i][j].truth for i in range(len(alternatives))]
+    indet_values = [V[i][j].indeterminacy for i in range(len(alternatives))]
+    fals_values = [V[i][j].falsity for i in range(len(alternatives))]
+    sum_t = gmean(truth_values)
+    sum_i = gmean(indet_values)
+    sum_f = gmean(fals_values)
     g.append(T2NeutrosophicNumber(sum_t, sum_i, sum_f))
 
 Q = []
@@ -146,7 +149,7 @@ for i in range(len(alternatives)):
 
 scores = []
 for i in range(len(alternatives)):
-    total = T2NeutrosophicNumber(0, 0, 0)
+    total = T2NeutrosophicNumber((0,0,0), (0,0,0), (0,0,0))
     for j in range(len(criteria)):
         total = total + Q[i][j]
     scores.append(total.score())
@@ -171,17 +174,25 @@ ax.bar(df_results["Alternative"], df_results["Score"], color="green")
 ax.set_ylabel("Score")
 ax.set_title("Alternatives Comparison")
 st.pyplot(fig)
-st.subheader("🔹 Border Approximation G (Average Neutrosophic Value)")
+best_alt = df_results.sort_values(by="Score", ascending=False).iloc[0]
+st.success(f"Best Alternative: **{best_alt['Alternative']}** with Score: **{best_alt['Score']:.4f}**")
+st.subheader("Border Approximation G (Average Neutrosophic Value)")
 df_g = pd.DataFrame(
-    {criteria[j]: [f"T: {round(g[j].truth, 3)} | I: {round(g[j].indeterminacy, 3)} | F: {round(g[j].falsity, 3)}"] for j in range(len(criteria))}
+    {criteria[j]: [
+        f"T: {round(np.mean(g[j].truth), 3)} | "
+        f"I: {round(np.mean(g[j].indeterminacy), 3)} | "
+        f"F: {round(np.mean(g[j].falsity), 3)}"
+    ]
+    for j in range(len(criteria))}
 ).T
 df_g.columns = ["G (T2N Avg)"]
 st.dataframe(df_g)
-
-st.subheader("🔹 Difference Matrix Q = V - G")
+st.subheader("Difference Matrix Q = V - G")
 df_q = pd.DataFrame(
     [[str(cell) for cell in row] for row in Q],
     columns=criteria,
     index=alternatives
 )
 st.dataframe(df_q)
+
+
