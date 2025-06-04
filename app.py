@@ -27,6 +27,13 @@ uploaded_file = st.file_uploader("Upload your Excel file", type=["xlsx"])
 
 if uploaded_file:
     df_raw = pd.read_excel(uploaded_file, sheet_name=0, header=1)
+    first_column_values = df_raw.iloc[:, 0].astype(str).str.upper()
+
+    if all(val.startswith("A") for val in first_column_values[:3]):
+     df_raw = df_raw.set_index(df_raw.columns[0])
+     df_raw = df_raw.transpose()
+     df_raw.insert(0, "Criteria", df_raw.index)
+     df_raw.reset_index(drop=True, inplace=True)
     try:
         df_info = pd.read_excel(uploaded_file, sheet_name=1)
     except:
@@ -164,14 +171,14 @@ ax.bar(df_results["Alternative"], df_results["Score"], color="green")
 ax.set_ylabel("Score")
 ax.set_title("Alternatives Comparison")
 st.pyplot(fig)
-st.subheader("Border Approximation G (Average Neutrosophic Value)")
+st.subheader("🔹 Border Approximation G (Average Neutrosophic Value)")
 df_g = pd.DataFrame(
     {criteria[j]: [f"T: {round(g[j].truth, 3)} | I: {round(g[j].indeterminacy, 3)} | F: {round(g[j].falsity, 3)}"] for j in range(len(criteria))}
 ).T
 df_g.columns = ["G (T2N Avg)"]
 st.dataframe(df_g)
 
-st.subheader("Difference Matrix Q = V - G")
+st.subheader("🔹 Difference Matrix Q = V - G")
 df_q = pd.DataFrame(
     [[str(cell) for cell in row] for row in Q],
     columns=criteria,
