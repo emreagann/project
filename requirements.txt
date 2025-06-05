@@ -3,4 +3,4 @@ pandas
 numpy
 matplotlib
 openpyxl
-gmean
+scipy
