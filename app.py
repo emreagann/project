@@ -2,9 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from t2 import T2NeutrosophicNumber, classic_to_t2n
-from scipy.stats import gmean
-st.title("T2 Neutrosophic MABAC for Ship Fuel Selection")
+st.title("MABAC for Ship Fuel Selection")
 
 def convert_range_to_mean(value):
     if pd.isna(value):
@@ -137,32 +135,9 @@ Total_scores = Distance_matrix.sum(axis=1)
 df_distance = pd.DataFrame(Distance_matrix, index=alternatives, columns=criteria)
 df_scores = pd.DataFrame({"TOTAL SCORE": Total_scores}, index=alternatives).sort_values(by="TOTAL SCORE", ascending=False)
 
-X_t2n = [[classic_to_t2n(X_norm[i][j]) for j in range(len(criteria))] for i in range(len(alternatives))]
-weights_t2n = [classic_to_t2n(w, indeterminacy=0.1) for w in weights]
-
-V = []
-for i in range(len(alternatives)):
-    row = []
-    for j in range(len(criteria)):
-        row.append(X_t2n[i][j] * weights_t2n[j])
-    V.append(row)
-
-g = []
-for j in range(len(criteria)):
-    truth_values = [V[i][j].truth for i in range(len(alternatives))]
-    indet_values = [V[i][j].indeterminacy for i in range(len(alternatives))]
-    fals_values = [V[i][j].falsity for i in range(len(alternatives))]
-    sum_t = gmean(truth_values)
-    sum_i = gmean(indet_values)
-    sum_f = gmean(fals_values)
-    g.append(T2NeutrosophicNumber(sum_t, sum_i, sum_f))
 
 
-scores = []
-for i in range(len(alternatives)):
-    total = T2NeutrosophicNumber((0,0,0), (0,0,0), (0,0,0))
-    for j in range(len(criteria)):
-     scores.append(total.score())
+
 
 
 
