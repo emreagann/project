@@ -30,10 +30,10 @@ if uploaded_file:
     first_column_values = df_raw.iloc[:, 0].astype(str).str.upper()
 
     if all(val.startswith("A") for val in first_column_values[:3]):
-     df_raw = df_raw.set_index(df_raw.columns[0])
-     df_raw = df_raw.transpose()
-     df_raw.insert(0, "Criteria", df_raw.index)
-     df_raw.reset_index(drop=True, inplace=True)
+        df_raw = df_raw.set_index(df_raw.columns[0])
+        df_raw = df_raw.transpose()
+        df_raw.insert(0, "Criteria", df_raw.index)
+        df_raw.reset_index(drop=True, inplace=True)
     try:
         df_info = pd.read_excel(uploaded_file, sheet_name=1)
     except:
@@ -53,7 +53,6 @@ if uploaded_file:
         weights_col = "weights"
 
     weights = [float(str(w).replace(',', '.')) for w in df_info[weights_col]]
-
 
     data_raw = df_raw.iloc[:, 1:].values
     X = np.array([[convert_range_to_mean(cell) for cell in row] for row in data_raw], dtype=float).T
@@ -87,8 +86,8 @@ else:
         st.write("Enter Criteria Weights")
         weights = []
         for crit in criteria:
-           w = st.number_input(f"Weight for {crit}", min_value=0.0, max_value=1.0, step=0.001, format="%.3f")
-           weights.append(w)
+            w = st.number_input(f"Weight for {crit}", min_value=0.0, max_value=1.0, step=0.001, format="%.3f")
+            weights.append(w)
 
         st.write("Enter Performance Values (Decision Matrix)")
         data_matrix = []
@@ -106,19 +105,37 @@ else:
     X = np.array([[convert_range_to_mean(cell) for cell in row] for row in data_matrix], dtype=float)
 
 X_norm = np.zeros_like(X)
-for j in range(len(criteria)):
-    col = X[:, j] 
+
+for j, (crit, ctype) in enumerate(zip(criteria, types)):
+    col = X[:, j]
     min_val = np.nanmin(col)
     max_val = np.nanmax(col)
+
     if max_val == min_val:
-        X_norm[:, j] = 0
+        X_norm[:, j] = 0.0
     else:
-        if types[j] == "benefit":
+        ctype_clean = ctype.strip().lower()
+        if ctype_clean == "benefit":
             X_norm[:, j] = (col - min_val) / (max_val - min_val)
-        else:
+        elif ctype_clean == "cost":
             X_norm[:, j] = (max_val - col) / (max_val - min_val)
 
 X_norm = np.nan_to_num(X_norm)
+
+V_numeric = np.zeros_like(X_norm)
+for i in range(len(alternatives)):
+    for j in range(len(criteria)):
+        V_numeric[i, j] = X_norm[i, j] * weights[j]
+
+df_weighted = pd.DataFrame(V_numeric, index=alternatives, columns=criteria)
+
+G_vector = np.prod(V_numeric + 1e-10, axis=0) ** (1 / V_numeric.shape[0])
+df_border = pd.DataFrame(G_vector.reshape(1, -1), columns=criteria)
+
+Distance_matrix = V_numeric - G_vector
+Total_scores = Distance_matrix.sum(axis=1)
+df_distance = pd.DataFrame(Distance_matrix, index=alternatives, columns=criteria)
+df_scores = pd.DataFrame({"TOTAL SCORE": Total_scores}, index=alternatives).sort_values(by="TOTAL SCORE", ascending=False)
 
 X_t2n = [[classic_to_t2n(X_norm[i][j]) for j in range(len(criteria))] for i in range(len(alternatives))]
 weights_t2n = [classic_to_t2n(w, indeterminacy=0.1) for w in weights]
@@ -140,59 +157,43 @@ for j in range(len(criteria)):
     sum_f = gmean(fals_values)
     g.append(T2NeutrosophicNumber(sum_t, sum_i, sum_f))
 
-Q = []
-for i in range(len(alternatives)):
-    row = []
-    for j in range(len(criteria)):
-        row.append(V[i][j] - g[j])
-    Q.append(row)
 
 scores = []
 for i in range(len(alternatives)):
     total = T2NeutrosophicNumber((0,0,0), (0,0,0), (0,0,0))
     for j in range(len(criteria)):
-        total = total + Q[i][j]
-    scores.append(total.score())
+     scores.append(total.score())
 
-df_results = pd.DataFrame({
-    "Alternative": alternatives,
-    "Score": scores
-})
 
-df_results_sorted = df_results.sort_values(by="Score", ascending=False).reset_index(drop=True)
 
 st.subheader("Original Decision Matrix (Performance Values)")
 df_original = pd.DataFrame(X, index=alternatives, columns=criteria)
 st.dataframe(df_original.style.format("{:.4f}"))
 
+st.subheader("Normalized Matrix (Benefit/Cost Adjusted)")
+df_norm = pd.DataFrame(X_norm, index=alternatives, columns=criteria)
+st.dataframe(df_norm.style.format("{:.4f}"))
 
-st.subheader("MABAC T2 Neutrosophic Final Results")
-st.dataframe(df_results_sorted.style.format({"Score": "{:.4f}"}))
+st.subheader("Weighted Normalized Matrix (V)")
+st.dataframe(df_weighted.style.format("{:.4f}"))
+
+st.subheader("Border Approximation Area (G)")
+st.dataframe(df_border.style.format("{:.6f}"))
+
+st.subheader("Distance Matrix (V - G)")
+st.dataframe(df_distance.style.format("{:.6f}"))
+
+st.subheader("MABAC Total Scores")
+st.dataframe(df_scores.style.format("{:.6f}"))
+
 
 fig, ax = plt.subplots()
-ax.bar(df_results_sorted["Alternative"], df_results_sorted["Score"], color="green")
+ax.bar(df_scores.index, df_scores["TOTAL SCORE"], color="blue")
 ax.set_ylabel("Score")
 ax.set_title("Alternatives Comparison")
 st.pyplot(fig)
-best_alt = df_results.sort_values(by="Score", ascending=False).iloc[0]
-st.success(f"Best Alternative: **{best_alt['Alternative']}** with Score: **{best_alt['Score']:.4f}**")
-st.subheader("Border Approximation G (Average Neutrosophic Value)")
-df_g = pd.DataFrame(
-    {criteria[j]: [
-        f"T: {round(np.mean(g[j].truth), 3)} | "
-        f"I: {round(np.mean(g[j].indeterminacy), 3)} | "
-        f"F: {round(np.mean(g[j].falsity), 3)}"
-    ]
-    for j in range(len(criteria))}
-).T
-df_g.columns = ["G (T2N Avg)"]
-st.dataframe(df_g)
-st.subheader("Difference Matrix Q = V - G")
-df_q = pd.DataFrame(
-    [[str(cell) for cell in row] for row in Q],
-    columns=criteria,
-    index=alternatives
-)
-st.dataframe(df_q)
+best_alt = df_scores.sort_values(by="TOTAL SCORE", ascending=False).iloc[0]
+st.success(f"Best Alternative: **{best_alt.name}** with Score: **{best_alt['TOTAL SCORE']:.4f}**")
+
 
 
