@@ -48,7 +48,7 @@ if uploaded_file:
         st.stop()
 
 
-      criteria = df_raw.index.tolist()
+    criteria = df_raw.index.tolist()
     alternatives = df_raw.columns.tolist() 
     data_raw = df_raw.iloc[:, 1:].values 
     df_info.columns = df_info.columns.str.strip().str.lower()
