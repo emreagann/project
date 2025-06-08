@@ -37,6 +37,7 @@ uploaded_file = st.file_uploader("Upload your Excel file", type=["xlsx"])
 
 if uploaded_file:
     df_raw = pd.read_excel(uploaded_file, sheet_name=0, index_col=0)
+    df_raw = df_raw.dropna(how='all') 
 
     try:
         df_info = pd.read_excel(uploaded_file, sheet_name=1)
