@@ -69,7 +69,7 @@ if uploaded_file:
     X_norm_obj = np.empty_like(X, dtype=object)
     for j in range(len(criteria)):
         col = [x[j] for x in X]
-        col_valid = [v for v in col if isinstance(v, T2NeutrosophicNumber)]
+        col_valid = [v for v in col if isinstance(v, T2NeutrosophicNumber) or isinstance(v, (int, float))]
 
         if not col_valid:
             st.error(f"{criteria[j]} sütununda geçerli T2NN değeri yok. Verileri kontrol et.")
