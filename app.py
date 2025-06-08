@@ -54,7 +54,9 @@ if uploaded_file:
     df_info.columns = df_info.columns.str.strip().str.lower()
 
     types = df_info["type"].tolist()
-
+    if len(types) != score_matrix.shape[1]:
+    st.error(f"Kriter türleri (types) sayısı ({len(types)}) ile veri sütunu sayısı ({score_matrix.shape[1]}) uyuşmuyor.")
+    st.stop()
     weights_col = "weight" if "weight" in df_info.columns else "weights"
     weights = [float(str(w).replace(',', '.')) for w in df_info[weights_col]]
 
