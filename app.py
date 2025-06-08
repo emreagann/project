@@ -35,7 +35,6 @@ def convert_range_to_t2n(value):
         except:
             return None
 
-
 uploaded_file = st.file_uploader("Upload your Excel file", type=["xlsx"])
 
 if uploaded_file:
@@ -50,15 +49,13 @@ if uploaded_file:
     alternatives = df_alt.columns.tolist()
     data_raw = df_alt.values.T
 
-    X = np.array([[convert_range_to_t2n(cell) for cell in row] for row in data_raw], dtype=object)
-
     df_weights.columns = df_weights.columns.str.strip().str.lower()
     df_sub.columns = df_sub.columns.str.strip().str.lower()
 
     required_weight_cols = {"criteria no", "weight"}
-    required_sub_cols = {"criteria no", "sub-criteria attributes"}
+    required_sub_cols = {"criteria no", "sub-criteria attributes", "type"}
     if not required_weight_cols.issubset(df_weights.columns) or not required_sub_cols.issubset(df_sub.columns):
-        st.error("Criteria Weights sheet must include: 'criteria no', 'weight'; Sub-Criteria sheet must include: 'criteria no', 'sub-criteria attributes'")
+        st.error("Criteria Weights sheet must include: 'criteria no', 'weight'; Sub-Criteria sheet must include: 'criteria no', 'sub-criteria attributes', 'type'")
         st.stop()
 
     df_weights["criteria no"] = df_weights["criteria no"].astype(str).str.strip().str.upper()
@@ -66,6 +63,7 @@ if uploaded_file:
 
     weights = []
     types = []
+    kinds = []
 
     for crit in criteria:
         crit_code = crit.strip().upper()
@@ -78,10 +76,21 @@ if uploaded_file:
 
         weights.append(float(str(weight_row.iloc[0]["weight"]).replace(',', '.')))
         attribute = sub_row.iloc[0]["sub-criteria attributes"].strip().lower()
+        kind = sub_row.iloc[0]["type"].strip().lower()
         if attribute not in {"benefit", "cost"}:
             st.error(f"{crit} için geçersiz sub-criteria attribute: {attribute}")
             st.stop()
         types.append(attribute)
+        kinds.append(kind)
+
+    X = np.empty_like(data_raw, dtype=object)
+    for j, crit in enumerate(criteria):
+        for i in range(len(alternatives)):
+            val = data_raw[i][j]
+            if kinds[j] == "quantitative":
+                X[i, j] = convert_range_to_t2n(val)
+            else:
+                X[i, j] = val
 
     X_norm_obj = np.empty_like(X, dtype=object)
     for j in range(len(criteria)):
