@@ -57,7 +57,7 @@ if uploaded_file:
         st.warning("Doğrudan T2NN değerleri girilmiş. Bu sürüm sadece aralık formatını destekler.")
         st.stop()
 
-      df_info.columns = df_info.columns.str.strip().str.lower()
+    df_info.columns = df_info.columns.str.strip().str.lower()
 
     df_info = df_info[df_info["criteria no"].astype(str).str.lower().str.startswith("c")]
 
