@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from t2 import T2NeutrosophicNumber
+from t2 import T2NeutrosophicNumber,t2nn_score
 
 st.title("MABAC for Ship Fuel Selection using T2 Neutrosophic Numbers")
 
@@ -48,13 +48,8 @@ if uploaded_file:
 
     X = np.array([[convert_range_to_t2n(cell) for cell in row] for row in data_raw], dtype=object)
     score_matrix = np.array([
-        [
-            np.mean(cell.truth) if isinstance(cell, T2NeutrosophicNumber)
-            else float(cell) if isinstance(cell, (int, float))
-            else 0.0
-            for cell in row
-        ]
-        for row in X
+    [t2nn_score(cell) for cell in row]
+    for row in X
     ])
 
     df_info.columns = df_info.columns.str.strip().str.lower()
@@ -80,7 +75,7 @@ if uploaded_file:
     X_norm = np.zeros_like(score_matrix)
     for j, ctype in enumerate(types):
         col = score_matrix[:, j]
-        if max_val == min_val:
+        if np.max(col) == np.min(col):
             X_norm[:, j] = 0
         elif ctype == "benefit":
             X_norm[:, j] = (col - np.min(col)) / (np.max(col) - np.min(col))
