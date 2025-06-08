@@ -37,7 +37,7 @@ uploaded_file = st.file_uploader("Upload your Excel file", type=["xlsx"])
 
 if uploaded_file:
     try:
-        df_alt = pd.read_excel(uploaded_file, sheet_name="Alternatives", index_col=0)
+        df_alt = pd.read_excel(uploaded_file, sheet_name="Alternatives", index_col=0, skiprows=1)
         df_info = pd.read_excel(uploaded_file, sheet_name="Criteria Weights")
     except:
         st.error("Dosya okunamadı veya beklenen sayfalar bulunamadı.")
