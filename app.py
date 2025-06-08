@@ -36,7 +36,7 @@ def convert_range_to_t2n(value):
 uploaded_file = st.file_uploader("Upload your Excel file", type=["xlsx"])
 
 if uploaded_file:
-   df_raw = pd.read_excel(uploaded_file, sheet_name=0, index_col=0)
+    df_raw = pd.read_excel(uploaded_file, sheet_name=0, index_col=0)
 
     try:
         df_info = pd.read_excel(uploaded_file, sheet_name=1)
@@ -46,6 +46,7 @@ if uploaded_file:
     except:
         st.error("Info sheet not found.")
         st.stop()
+
 
     criteria = df_raw.index.tolist()
     alternatives = df_raw.columns.tolist() 
