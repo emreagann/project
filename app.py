@@ -30,6 +30,7 @@ def convert_range_to_t2n(value):
                 return None
     try:
         value = float(value.replace(',', '.'))
+        # Sayısal değer doğrudan T2NN'e çevriliyor
         return T2NeutrosophicNumber(
             truth=(value, value, value),
             indeterminacy=(0.0, 0.0, 0.0),
