@@ -23,17 +23,22 @@ def t2nn_score(t2nn):
     else:
         return 0.0
 
-def normalize_t2nn(value, min_t2nn, max_t2nn, ctype):
-    if not isinstance(value, T2NeutrosophicNumber):
-        return 0.0
+def normalize_t2nn(value, min_val, max_val, ctype):
+    if isinstance(value, T2NeutrosophicNumber):
+        def norm(x, min_x, max_x, is_benefit):
+            if max_x - min_x == 0:
+                return 0.0
+            return (x - min_x) / (max_x - min_x) if is_benefit else (max_x - x) / (max_x - min_x)
 
-    def norm(x, min_x, max_x, is_benefit):
-        if max_x - min_x == 0:
+        t = [norm(value.truth[i], min_val.truth[i], max_val.truth[i], ctype == "benefit") for i in range(3)]
+        i = [norm(value.indeterminacy[i], min_val.indeterminacy[i], max_val.indeterminacy[i], ctype == "cost") for i in range(3)]
+        f = [norm(value.falsity[i], min_val.falsity[i], max_val.falsity[i], ctype == "cost") for i in range(3)]
+        return T2NeutrosophicNumber(tuple(t), tuple(i), tuple(f))
+    
+    elif isinstance(value, (int, float)):
+        if max_val - min_val == 0:
             return 0.0
-        return (x - min_x) / (max_x - min_x) if is_benefit else (max_x - x) / (max_x - min_x)
+        return (value - min_val) / (max_val - min_val) if ctype == "benefit" else (max_val - value) / (max_val - min_val)
 
-    t = [norm(value.truth[i], min_t2nn.truth[i], max_t2nn.truth[i], ctype == "benefit") for i in range(3)]
-    i = [norm(value.indeterminacy[i], min_t2nn.indeterminacy[i], max_t2nn.indeterminacy[i], ctype == "cost") for i in range(3)]
-    f = [norm(value.falsity[i], min_t2nn.falsity[i], max_t2nn.falsity[i], ctype == "cost") for i in range(3)]
+    return 0.0
 
-    return T2NeutrosophicNumber(tuple(t), tuple(i), tuple(f))
