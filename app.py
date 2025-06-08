@@ -36,14 +36,7 @@ def convert_range_to_t2n(value):
 uploaded_file = st.file_uploader("Upload your Excel file", type=["xlsx"])
 
 if uploaded_file:
-    df_raw = pd.read_excel(uploaded_file, sheet_name=0, header=1)
-    first_column_values = df_raw.iloc[:, 0].astype(str).str.upper()
-
-    if all(val.startswith("A") for val in first_column_values[:3]):
-        df_raw = df_raw.set_index(df_raw.columns[0])
-        df_raw = df_raw.transpose()
-        df_raw.insert(0, "Criteria", df_raw.index)
-        df_raw.reset_index(drop=True, inplace=True)
+   df_raw = pd.read_excel(uploaded_file, sheet_name=0, index_col=0)
 
     try:
         df_info = pd.read_excel(uploaded_file, sheet_name=1)
