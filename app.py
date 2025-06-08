@@ -6,11 +6,11 @@ from t2 import T2NeutrosophicNumber
 
 st.title("MABAC for Ship Fuel Selection using T2 Neutrosophic Numbers")
 
+# Dönüştürücü: aralık -> T2NN
 def convert_range_to_t2n(value):
     if pd.isna(value):
         return None
     value = str(value).strip()
-
     if '-' in value or '–' in value:
         value = value.replace('–', '-')
         parts = value.split('-')
@@ -19,7 +19,7 @@ def convert_range_to_t2n(value):
                 low = float(parts[0].replace(',', '.'))
                 high = float(parts[1].replace(',', '.'))
                 if low == high:
-                    return low 
+                    return low
                 mid = (low + high) / 2
                 indet = (high - low) / 2
                 truth = (low, mid, high)
@@ -35,160 +35,108 @@ def convert_range_to_t2n(value):
 
 uploaded_file = st.file_uploader("Upload your Excel file", type=["xlsx"])
 
-score_matrix = None
-types = None
-weights = None
-alternatives = []
-criteria = []
-
 if uploaded_file:
-    df_raw = pd.read_excel(uploaded_file, sheet_name=0, index_col=0).dropna(how='all')
-    df_raw.index = df_raw.index.astype(str)
-    df_raw = df_raw[df_raw.index.str.lower().str.startswith("c")]
-
-
-
     try:
-       df_info = pd.read_excel(uploaded_file, sheet_name=1)
+        df_alt = pd.read_excel(uploaded_file, sheet_name="Alternatives", index_col=0)
+        df_info = pd.read_excel(uploaded_file, sheet_name="Criteria Weights")
     except:
-        st.error("Info sheet not found.")
+        st.error("Dosya okunamadı veya beklenen sayfalar bulunamadı.")
         st.stop()
 
-    if any(col.lower().startswith(("truth", "t", "indeterminacy", "i", "falsity", "f")) for col in df_raw.columns):
-        st.warning("Doğrudan T2NN değerleri girilmiş. Bu sürüm sadece aralık formatını destekler.")
-        st.stop()
+    # Verileri alma
+    criteria = df_alt.index.tolist()
+    alternatives = df_alt.columns.tolist()
+    data_raw = df_alt.values.T  # Alternatifler satır, kriterler sütun olacak şekilde transpoze et
 
-    df_info.columns = df_info.columns.str.strip().str.lower()
-
-    weights_col = "weight" if "weight" in df_info.columns else "weights"
-
-    try:
-        weights = [float(str(w).replace(',', '.')) for w in df_info[weights_col]]
-    except:
-        st.error("Ağırlıklar sayıya çevrilemedi.")
-        st.stop()
-
-    types = df_info["type"].tolist()
-
-    criteria = df_raw.index.tolist()
-    alternatives = df_raw.columns.tolist()
-    data_raw = df_raw.values
-
+    # T2NN dönüşüm
     X = np.array([[convert_range_to_t2n(cell) for cell in row] for row in data_raw], dtype=object)
     score_matrix = np.array([
         [
             np.mean(cell.truth) if isinstance(cell, T2NeutrosophicNumber)
-            else float(cell) if isinstance(cell, (int, float)) 
+            else float(cell) if isinstance(cell, (int, float))
             else 0.0
             for cell in row
         ]
         for row in X
     ])
 
+    # Ağırlık ve türleri alma
+    df_info.columns = df_info.columns.str.strip().str.lower()
+    if "weight" not in df_info.columns or "type" not in df_info.columns or "criteria no" not in df_info.columns:
+        st.error("Criteria Weights sayfasında gerekli sütunlar eksik (criteria no, type, weight).")
+        st.stop()
 
-# -------------------- MANUEL GİRİŞ MODU --------------------
-if not uploaded_file:
-    st.subheader("Manual Data Entry")
+    try:
+        weights = []
+        types = []
+        for crit in criteria:
+            crit_info = df_info[df_info["criteria no"].str.upper() == crit.upper()]
+            if crit_info.empty:
+                st.error(f"{crit} için ağırlık/tip bilgisi bulunamadı.")
+                st.stop()
+            weights.append(float(str(crit_info["weight"].values[0]).replace(",", ".")))
+            types.append(crit_info["type"].values[0].strip().lower())
+    except Exception as e:
+        st.error(f"Ağırlık ve tür bilgileri alınırken hata: {e}")
+        st.stop()
 
-    alt_count = st.number_input("Number of Alternatives", min_value=1, step=1)
-    crit_count = st.number_input("Number of Criteria", min_value=1, step=1)
-
-    with st.form("data_entry_form"):
-        for i in range(int(alt_count)):
-            alt = st.text_input(f"Alternative {i+1}", key=f"alt_{i}")
-            alternatives.append(alt if alt else f"Alt{i+1}")
-
-        for j in range(int(crit_count)):
-            crit = st.text_input(f"Criterion {j+1}", key=f"crit_{j}")
-            criteria.append(crit if crit else f"Crit{j+1}")
-
-        types = [st.selectbox(f"{c} type", ["benefit", "cost"], key=c) for c in criteria]
-        weights = [st.number_input(f"Weight for {c}", min_value=0.0, max_value=1.0, step=0.01) for c in criteria]
-
-        data_matrix = []
-        for j in range(int(crit_count)):
-            row = []
-            for i in range(int(alt_count)):
-                val = st.text_input(f"Value for {alternatives[i]} - {criteria[j]}", key=f"val_{j}_{i}")
-                row.append(val)
-            data_matrix.append(row)
-
-        submitted = st.form_submit_button("Calculate")
-        if submitted:
-            X = np.array([[convert_range_to_t2n(cell) for cell in row] for row in zip(*data_matrix)], dtype=object)
-            score_matrix = np.array([
-                [
-                    np.mean(cell.truth) if isinstance(cell, T2NeutrosophicNumber)
-                    else float(cell) if isinstance(cell, (int, float)) 
-                    else 0.0
-                    for cell in row
-                ]
-                for row in X
-            ])
+    # Normalizasyon
+    X_norm = np.zeros_like(score_matrix)
+    for j, ctype in enumerate(types):
+        col = score_matrix[:, j]
+        min_val, max_val = np.min(col), np.max(col)
+        if max_val == min_val:
+            X_norm[:, j] = 0
+        elif ctype == "benefit":
+            X_norm[:, j] = (col - min_val) / (max_val - min_val)
         else:
-            st.stop()
+            X_norm[:, j] = (max_val - col) / (max_val - min_val)
 
-# -------------------- DEVAM: MABAC Hesaplamaları --------------------
-if score_matrix is None:
-    st.info("Lütfen bir Excel dosyası yükleyin veya manuel veri girin.")
-    st.stop()
+    # Ağırlıklı normalizasyon (V)
+    V_numeric = X_norm * np.array(weights)
 
-if len(types) != score_matrix.shape[1]:
-    st.error("Kriter türü sayısı ile veri sütun sayısı uyuşmuyor.")
-    st.stop()
+    # Sınır yaklaşım alanı (G)
+    G_vector = np.prod(V_numeric, axis=0) ** (1 / V_numeric.shape[0])
 
-X_norm = np.zeros_like(score_matrix)
-for j, ctype in enumerate(types):
-    col = score_matrix[:, j]
-    min_val, max_val = np.min(col), np.max(col)
+    # Mesafe matrisi ve toplam puanlar
+    Distance_matrix = V_numeric - G_vector
+    Total_scores = Distance_matrix.sum(axis=1)
 
-    if max_val == min_val:
-        X_norm[:, j] = 0
-    elif ctype.strip().lower() == "benefit":
-        X_norm[:, j] = (col - min_val) / (max_val - min_val)
-    else:
-        X_norm[:, j] = (max_val - col) / (max_val - min_val)
+    # DataFrame sonuçları
+    df_original = pd.DataFrame(score_matrix, index=alternatives, columns=criteria)
+    df_norm = pd.DataFrame(X_norm, index=alternatives, columns=criteria)
+    df_weighted = pd.DataFrame(V_numeric, index=alternatives, columns=criteria)
+    df_border = pd.DataFrame(G_vector.reshape(1, -1), columns=criteria)
+    df_distance = pd.DataFrame(Distance_matrix, index=alternatives, columns=criteria)
+    df_scores = pd.DataFrame({"TOTAL SCORE": Total_scores}, index=alternatives).sort_values(by="TOTAL SCORE", ascending=False)
 
-V_numeric = np.zeros_like(X_norm)
-for i in range(len(alternatives)):
-    for j in range(len(criteria)):
-        V_numeric[i, j] = X_norm[i, j] * weights[j]
+    # Sonuçlar
+    st.subheader("Original Decision Matrix (Performance Values)")
+    st.dataframe(df_original.style.format("{:.3f}"))
 
-G_vector = np.prod(V_numeric, axis=0) ** (1 / V_numeric.shape[0])
-Distance_matrix = V_numeric - G_vector
-Total_scores = Distance_matrix.sum(axis=1)
+    st.subheader("Normalized Matrix")
+    st.dataframe(df_norm.style.format("{:.3f}"))
 
-df_original = pd.DataFrame(score_matrix, index=alternatives, columns=criteria)
-df_norm = pd.DataFrame(X_norm, index=alternatives, columns=criteria)
-df_weighted = pd.DataFrame(V_numeric, index=alternatives, columns=criteria)
-df_border = pd.DataFrame(G_vector.reshape(1, -1), columns=criteria)
-df_distance = pd.DataFrame(Distance_matrix, index=alternatives, columns=criteria)
-df_scores = pd.DataFrame({"TOTAL SCORE": Total_scores}, index=alternatives).sort_values(by="TOTAL SCORE", ascending=False)
+    st.subheader("Weighted Normalized Matrix (V)")
+    st.dataframe(df_weighted.style.format("{:.3f}"))
 
-# -------------------- GÖRSEL VE SONUÇLAR --------------------
-st.subheader("Original Decision Matrix (Performance Values)")
-st.dataframe(df_original.style.format("{:.3f}"))
+    st.subheader("Border Approximation Area (G)")
+    st.dataframe(df_border.style.format("{:.3f}"))
 
-st.subheader("Normalized Matrix")
-st.dataframe(df_norm.style.format("{:.3f}"))
+    st.subheader("Distance Matrix (V - G)")
+    st.dataframe(df_distance.style.format("{:.3f}"))
 
-st.subheader("Weighted Normalized Matrix (V)")
-st.dataframe(df_weighted.style.format("{:.3f}"))
+    st.subheader("MABAC Total Scores")
+    st.dataframe(df_scores.style.format("{:.4f}"))
 
-st.subheader("Border Approximation Area (G)")
-st.dataframe(df_border.style.format("{:.3f}"))
+    # Grafik
+    fig, ax = plt.subplots()
+    ax.bar(df_scores.index, df_scores["TOTAL SCORE"], color="steelblue")
+    ax.set_ylabel("Score")
+    ax.set_title("Alternative Comparison")
+    st.pyplot(fig)
 
-st.subheader("Distance Matrix (V - G)")
-st.dataframe(df_distance.style.format("{:.3f}"))
-
-st.subheader("MABAC Total Scores")
-st.dataframe(df_scores.style.format("{:.4f}"))
-
-fig, ax = plt.subplots()
-ax.bar(df_scores.index, df_scores["TOTAL SCORE"], color="steelblue")
-ax.set_ylabel("Score")
-ax.set_title("Alternative Comparison")
-st.pyplot(fig)
-
-best = df_scores.iloc[0]
-st.success(f"Best Alternative: **{best.name}** with Score: **{best['TOTAL SCORE']:.4f}**")
+    best = df_scores.iloc[0]
+    st.success(f"Best Alternative: **{best.name}** with Score: **{best['TOTAL SCORE']:.4f}**")
+else:
+    st.info("Lütfen bir Excel dosyası yükleyin.")
