@@ -70,9 +70,10 @@ score_matrix = np.array([
 ])
 
 types = df_info["type"].tolist()
-if len(types) != score_matrix.shape[0]:  # <-- row sayısı çünkü kriterler satırda
-    st.error(f"Kriter türleri (types) sayısı ({len(types)}) ile veri satırı sayısı ({score_matrix.shape[0]}) uyuşmuyor.")
+if len(types) != score_matrix.shape[1]:  # sütun sayısı ile karşılaştırılmalı
+    st.error(f"Kriter türleri (types) sayısı ({len(types)}) ile veri sütunu sayısı ({score_matrix.shape[1]}) uyuşmuyor.")
     st.stop()
+
 else:
     st.subheader("Manual Data Entry")
 
