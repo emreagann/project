@@ -46,6 +46,7 @@ if uploaded_file:
     data_raw = df_alt.values.T
 
     X = np.array([[convert_range_to_t2n(cell) for cell in row] for row in data_raw], dtype=object)
+
     df_info.columns = df_info.columns.str.strip().str.lower()
     if "weight" not in df_info.columns or "type" not in df_info.columns or "criteria no" not in df_info.columns:
         st.stop()
@@ -57,6 +58,7 @@ if uploaded_file:
         for crit in criteria:
             crit_info = df_info[df_info["criteria no"] == crit.strip().upper()]
             if crit_info.empty:
+                st.error(f"{crit} için ağırlık/tip bilgisi bulunamadı.")
                 st.stop()
             weights.append(float(str(crit_info.iloc[0]["weight"]).replace(',', '.')))
             types.append(crit_info.iloc[0]["type"].strip().lower())
@@ -68,6 +70,11 @@ if uploaded_file:
     for j in range(len(criteria)):
         col = [x[j] for x in X]
         col_valid = [v for v in col if isinstance(v, T2NeutrosophicNumber)]
+
+        if not col_valid:
+            st.error(f"{criteria[j]} sütununda geçerli T2NN değeri yok. Verileri kontrol et.")
+            st.stop()
+
         min_val = T2NeutrosophicNumber(
             truth=tuple(min(v.truth[i] for v in col_valid) for i in range(3)),
             indeterminacy=tuple(min(v.indeterminacy[i] for v in col_valid) for i in range(3)),
