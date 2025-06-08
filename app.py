@@ -54,8 +54,9 @@ if uploaded_file:
         st.error("Info sheet not found.")
         st.stop()
 
-    criteria = df_raw.iloc[:, 0].tolist()
-    alternatives = df_raw.columns[1:].tolist()
+   criteria = df_raw["Criteria"].tolist() 
+   alternatives = df_raw.columns[1:].tolist() 
+   data_raw = df_raw.iloc[:, 1:].values 
     df_info.columns = df_info.columns.str.strip().str.lower()
 
     types = df_info["type"].tolist()
@@ -63,7 +64,6 @@ if uploaded_file:
     weights_col = "weight" if "weight" in df_info.columns else "weights"
     weights = [float(str(w).replace(',', '.')) for w in df_info[weights_col]]
 
-    data_raw = df_raw.iloc[:, 1:].values
     X = np.array([[convert_range_to_t2n(cell) for cell in row] for row in data_raw], dtype=object)
 
 else:
