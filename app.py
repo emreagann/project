@@ -73,11 +73,11 @@ if uploaded_file:
             st.stop()
 
         weights.append(float(str(weight_row.iloc[0]["weight"]).replace(',', '.')))
-        perspective = sub_row.iloc[0]["evaluation perspective"].strip().lower()
-        if perspective not in {"benefit", "cost"}:
-            st.error(f"{crit} için geçersiz perspective: {perspective}")
+        attribute = sub_row.iloc[0]["sub-criteria attributes"].strip().lower()
+        if attribute not in {"benefit", "cost"}:
+            st.error(f"{crit} için geçersiz sub-criteria attribute: {attribute}")
             st.stop()
-        types.append(perspective)
+        types.append(attribute)
 
     X_norm_obj = np.empty_like(X, dtype=object)
     for j in range(len(criteria)):
