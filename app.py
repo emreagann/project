@@ -17,22 +17,25 @@ def convert_range_to_t2n(value):
             try:
                 low = float(parts[0].replace(',', '.'))
                 high = float(parts[1].replace(',', '.'))
+                if low > high:  # Ters yazılmışsa düzelt
+                    low, high = high, low
                 mid = (low + high) / 2
                 indet = (high - low) / 2
                 truth = (low, mid, high)
                 indeterminacy = (indet, indet, indet)
-                falsity = tuple(1 - t for t in truth)
+                falsity = tuple(max(0.0, 1 - t) for t in truth)  # güvenli tanım
                 return T2NeutrosophicNumber(truth, indeterminacy, falsity)
             except:
                 return None
-    try:
-        val = float(value.replace(',', '.'))
-        truth = (val, val, val)
-        indeterminacy = (0.0, 0.0, 0.0)
-        falsity = (1 - val, 1 - val, 1 - val)
-        return T2NeutrosophicNumber(truth, indeterminacy, falsity)
-    except:
-        return None
+    else:
+        try:
+            val = float(value.replace(',', '.'))
+            truth = (val, val, val)
+            indeterminacy = (0.0, 0.0, 0.0)
+            falsity = tuple(max(0.0, 1 - val) for _ in range(3))
+            return T2NeutrosophicNumber(truth, indeterminacy, falsity)
+        except:
+            return None
 
 uploaded_file = st.file_uploader("Upload your Excel file", type=["xlsx"])
 
