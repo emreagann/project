@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from t2 import T2NeutrosophicNumber,t2nn_score
+from t2 import T2NeutrosophicNumber, t2nn_score, normalize_t2nn
 
 st.title("MABAC for Ship Fuel Selection using T2 Neutrosophic Numbers")
 
@@ -39,32 +39,24 @@ if uploaded_file:
         df_alt = pd.read_excel(uploaded_file, sheet_name="Alternatives", index_col=0, skiprows=1)
         df_info = pd.read_excel(uploaded_file, sheet_name="Criteria Weights")
     except:
-        st.error("Dosya okunamadı veya beklenen sayfalar bulunamadı.")
         st.stop()
 
     criteria = df_alt.index.tolist()
     alternatives = df_alt.columns.tolist()
-    data_raw = df_alt.values.T  
+    data_raw = df_alt.values.T
 
     X = np.array([[convert_range_to_t2n(cell) for cell in row] for row in data_raw], dtype=object)
-    score_matrix = np.array([
-    [t2nn_score(cell) for cell in row]
-    for row in X
-    ])
-
     df_info.columns = df_info.columns.str.strip().str.lower()
     if "weight" not in df_info.columns or "type" not in df_info.columns or "criteria no" not in df_info.columns:
-        st.error("Criteria Weights sayfasında gerekli sütunlar eksik (criteria no, type, weight).")
         st.stop()
 
     try:
         weights = []
         types = []
+        df_info["criteria no"] = df_info["criteria no"].astype(str).str.strip().str.upper()
         for crit in criteria:
-            df_info["criteria no"] = df_info["criteria no"].astype(str).str.strip().str.upper()
             crit_info = df_info[df_info["criteria no"] == crit.strip().upper()]
             if crit_info.empty:
-                st.error(f"{crit} için ağırlık/tip bilgisi bulunamadı.")
                 st.stop()
             weights.append(float(str(crit_info.iloc[0]["weight"]).replace(',', '.')))
             types.append(crit_info.iloc[0]["type"].strip().lower())
@@ -72,33 +64,36 @@ if uploaded_file:
         st.error(f"Ağırlık ve tür bilgileri alınırken hata: {e}")
         st.stop()
 
-    X_norm = np.zeros_like(score_matrix)
-    for j, ctype in enumerate(types):
-        col = score_matrix[:, j]
-        if np.max(col) == np.min(col):
-            X_norm[:, j] = 0
-        elif ctype == "benefit":
-            X_norm[:, j] = (col - np.min(col)) / (np.max(col) - np.min(col))
-        else:
-            X_norm[:, j] = (np.max(col) - col) / (np.max(col) - np.min(col))
+    X_norm_obj = np.empty_like(X, dtype=object)
+    for j in range(len(criteria)):
+        col = [x[j] for x in X]
+        col_valid = [v for v in col if isinstance(v, T2NeutrosophicNumber)]
+        min_val = T2NeutrosophicNumber(
+            truth=tuple(min(v.truth[i] for v in col_valid) for i in range(3)),
+            indeterminacy=tuple(min(v.indeterminacy[i] for v in col_valid) for i in range(3)),
+            falsity=tuple(min(v.falsity[i] for v in col_valid) for i in range(3)),
+        )
+        max_val = T2NeutrosophicNumber(
+            truth=tuple(max(v.truth[i] for v in col_valid) for i in range(3)),
+            indeterminacy=tuple(max(v.indeterminacy[i] for v in col_valid) for i in range(3)),
+            falsity=tuple(max(v.falsity[i] for v in col_valid) for i in range(3)),
+        )
+        for i in range(len(alternatives)):
+            X_norm_obj[i, j] = normalize_t2nn(X[i, j], min_val, max_val, types[j])
+
+    X_norm = np.array([[t2nn_score(cell) for cell in row] for row in X_norm_obj])
 
     V_numeric = X_norm * np.array(weights)
-
-    
     G_vector = np.prod(V_numeric, axis=0) ** (1 / V_numeric.shape[0])
-
-
     Distance_matrix = V_numeric - G_vector
     Total_scores = Distance_matrix.sum(axis=1)
 
-
-    df_original = pd.DataFrame(score_matrix, index=alternatives, columns=criteria)
+    df_original = pd.DataFrame([[t2nn_score(cell) for cell in row] for row in X], index=alternatives, columns=criteria)
     df_norm = pd.DataFrame(X_norm, index=alternatives, columns=criteria)
     df_weighted = pd.DataFrame(V_numeric, index=alternatives, columns=criteria)
     df_border = pd.DataFrame(G_vector.reshape(1, -1), columns=criteria)
     df_distance = pd.DataFrame(Distance_matrix, index=alternatives, columns=criteria)
     df_scores = pd.DataFrame({"TOTAL SCORE": Total_scores}, index=alternatives).sort_values(by="TOTAL SCORE", ascending=False)
-
 
     st.subheader("Original Decision Matrix (Performance Values)")
     st.dataframe(df_original.style.format("{:.3f}"))
@@ -118,7 +113,6 @@ if uploaded_file:
     st.subheader("MABAC Total Scores")
     st.dataframe(df_scores.style.format("{:.4f}"))
 
-    # Grafik
     fig, ax = plt.subplots()
     ax.bar(df_scores.index, df_scores["TOTAL SCORE"], color="steelblue")
     ax.set_ylabel("Score")
