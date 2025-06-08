@@ -81,13 +81,13 @@ if uploaded_file:
             st.error(f"{crit} için geçersiz sub-criteria attribute: {attribute}")
             st.stop()
         attributes.append(attribute)
-        perspectives.append(kind)
+        perspectives.append(perspective)
 
     X = np.empty_like(data_raw, dtype=object)
     for j, crit in enumerate(criteria):
         for i in range(len(alternatives)):
             val = data_raw[i][j]
-            if kinds[j] == "quantitative":
+            if perspective[j] == "quantitative":
                 X[i, j] = convert_range_to_t2n(val)
             else:
                 X[i, j] = val
