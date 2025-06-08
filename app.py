@@ -105,7 +105,6 @@ else:
         if not submitted:
             st.stop()
 
-    X = np.array([[convert_range_to_t2n(cell) for cell in row] for row in data_matrix], dtype=object)
 
 
 
