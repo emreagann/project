@@ -53,17 +53,17 @@ if uploaded_file:
     df_sub.columns = df_sub.columns.str.strip().str.lower()
 
     required_weight_cols = {"criteria no", "weight"}
-    required_sub_cols = {"criteria no", "sub-criteria attributes", "type"}
+    required_sub_cols = {"criteria no", "sub-criteria attributes", "evaluation perspective"}
     if not required_weight_cols.issubset(df_weights.columns) or not required_sub_cols.issubset(df_sub.columns):
-        st.error("Criteria Weights sheet must include: 'criteria no', 'weight'; Sub-Criteria sheet must include: 'criteria no', 'sub-criteria attributes', 'type'")
+        st.error("Criteria Weights sheet must include: 'criteria no', 'weight'; Sub-Criteria sheet must include: 'criteria no', 'sub-criteria attributes', 'evaluation perspective'")
         st.stop()
 
     df_weights["criteria no"] = df_weights["criteria no"].astype(str).str.strip().str.upper()
     df_sub["criteria no"] = df_sub["criteria no"].astype(str).str.strip().str.upper()
 
     weights = []
-    types = []
-    kinds = []
+    attributes = []
+    perspectives = []
 
     for crit in criteria:
         crit_code = crit.strip().upper()
@@ -76,12 +76,12 @@ if uploaded_file:
 
         weights.append(float(str(weight_row.iloc[0]["weight"]).replace(',', '.')))
         attribute = sub_row.iloc[0]["sub-criteria attributes"].strip().lower()
-        kind = sub_row.iloc[0]["type"].strip().lower()
+        perspective = sub_row.iloc[0]["evaluation perspective"].strip().lower()
         if attribute not in {"benefit", "cost"}:
             st.error(f"{crit} için geçersiz sub-criteria attribute: {attribute}")
             st.stop()
-        types.append(attribute)
-        kinds.append(kind)
+        attributes.append(attribute)
+        perspectives.append(kind)
 
     X = np.empty_like(data_raw, dtype=object)
     for j, crit in enumerate(criteria):
@@ -112,7 +112,7 @@ if uploaded_file:
             falsity=tuple(max(v.falsity[i] for v in col_valid) for i in range(3)),
         )
         for i in range(len(alternatives)):
-            X_norm_obj[i, j] = normalize_t2nn(X[i, j], min_val, max_val, types[j])
+            X_norm_obj[i, j] = normalize_t2nn(X[i, j], min_val, max_val, attributes[j])
 
     X_norm = np.array([[t2nn_score(cell) for cell in row] for row in X_norm_obj])
 
