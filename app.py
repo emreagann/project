@@ -144,22 +144,22 @@ df_distance = pd.DataFrame(Distance_matrix, index=alternatives, columns=criteria
 df_scores = pd.DataFrame({"TOTAL SCORE": Total_scores}, index=alternatives).sort_values(by="TOTAL SCORE", ascending=False)
 
 st.subheader("Original Decision Matrix (Performance Values)")
-st.dataframe(df_original.style.format("{:.9f}"))
+st.dataframe(df_original.style.format("{:.3f}"))
 
 st.subheader("Normalized Matrix")
-st.dataframe(df_norm.style.format("{:.4f}"))
+st.dataframe(df_norm.style.format("{:.3f}"))
 
 st.subheader("Weighted Normalized Matrix (V)")
-st.dataframe(df_weighted.style.format("{:.4f}"))
+st.dataframe(df_weighted.style.format("{:.3f}"))
 
 st.subheader("Border Approximation Area (G)")
-st.dataframe(df_border.style.format("{:.6f}"))
+st.dataframe(df_border.style.format("{:.3f}"))
 
 st.subheader("Distance Matrix (V - G)")
-st.dataframe(df_distance.style.format("{:.6f}"))
+st.dataframe(df_distance.style.format("{:.3f}"))
 
 st.subheader("MABAC Total Scores")
-st.dataframe(df_scores.style.format("{:.6f}"))
+st.dataframe(df_scores.style.format("{:.4f}"))
 
 fig, ax = plt.subplots()
 ax.bar(df_scores.index, df_scores["TOTAL SCORE"], color="steelblue")
