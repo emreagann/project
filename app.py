@@ -49,7 +49,7 @@ if uploaded_file:
     X = np.array([[convert_range_to_t2n(cell) for cell in row] for row in data_raw], dtype=object)
     score_matrix = np.array([
         [
-            np.mean(cell.truth) if isinstance(cell, T2NeutrosophicNumber)
+            cell.truth[1] if isinstance(cell, T2NeutrosophicNumber)
             else float(cell) if isinstance(cell, (int, float))
             else 0.0
             for cell in row
