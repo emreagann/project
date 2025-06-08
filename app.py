@@ -70,7 +70,8 @@ if uploaded_file:
         weights = []
         types = []
         for crit in criteria:
-            crit_info = df_info[df_info["criteria no"].str.upper() == crit.upper()]
+            df_info["criteria no"] = df_info["criteria no"].astype(str).str.strip().str.upper()
+            crit_info = df_info[df_info["criteria no"] == crit.strip().upper()]
             if crit_info.empty:
                 st.error(f"{crit} için ağırlık/tip bilgisi bulunamadı.")
                 st.stop()
