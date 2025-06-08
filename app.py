@@ -112,7 +112,8 @@ score_matrix = np.array([
 
 
 X_norm = np.array(score_matrix, copy=True)
-
+st.write("Criteria Types:", types)
+st.write("Criteria:", criteria)
 X_norm = np.zeros_like(score_matrix)
 for j, ctype in enumerate(types):
     col = score_matrix[:, j]
