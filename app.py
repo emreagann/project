@@ -131,7 +131,7 @@ for i in range(len(alternatives)):
     for j in range(len(criteria)):
         V_numeric[i, j] = X_norm[i, j] * weights[j]
 
-G_vector = np.prod(V_numeric + 1e-10, axis=0) ** (1 / V_numeric.shape[0])
+G_vector = np.prod(V_numeric, axis=0) ** (1 / V_numeric.shape[0])
 
 Distance_matrix = V_numeric - G_vector
 Total_scores = Distance_matrix.sum(axis=1)
