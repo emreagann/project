@@ -69,31 +69,28 @@ if uploaded_file:
         st.stop()
 
     X_norm_obj = np.empty_like(X, dtype=object)
-    for j, ctype in enumerate(types):
+    for j in range(len(criteria)):
         col = [x[j] for x in X]
-        col_valid = [v for v in col if isinstance(v, T2NeutrosophicNumber)]
+        ctype = types[j]
 
-        if not col_valid:
-            # Handle numerical column
-            vals = [v for v in col if isinstance(v, (int, float))]
-            min_val, max_val = min(vals), max(vals)
-            for i in range(len(alternatives)):
-                if isinstance(X[i, j], (int, float)):
-                    X_norm_obj[i, j] = (X[i, j] - min_val) / (max_val - min_val) if ctype == "benefit" else (max_val - X[i, j]) / (max_val - min_val)
-                else:
-                    X_norm_obj[i, j] = 0.0
-        else:
+        if all(isinstance(v, T2NeutrosophicNumber) for v in col):
+        # T2NN için min/max
             min_val = T2NeutrosophicNumber(
-                truth=tuple(min(v.truth[i] for v in col_valid) for i in range(3)),
-                indeterminacy=tuple(min(v.indeterminacy[i] for v in col_valid) for i in range(3)),
-                falsity=tuple(min(v.falsity[i] for v in col_valid) for i in range(3)),
+            truth=tuple(min(v.truth[i] for v in col) for i in range(3)),
+            indeterminacy=tuple(min(v.indeterminacy[i] for v in col) for i in range(3)),
+            falsity=tuple(min(v.falsity[i] for v in col) for i in range(3)),
             )
             max_val = T2NeutrosophicNumber(
-                truth=tuple(max(v.truth[i] for v in col_valid) for i in range(3)),
-                indeterminacy=tuple(max(v.indeterminacy[i] for v in col_valid) for i in range(3)),
-                falsity=tuple(max(v.falsity[i] for v in col_valid) for i in range(3)),
+            truth=tuple(max(v.truth[i] for v in col) for i in range(3)),
+            indeterminacy=tuple(max(v.indeterminacy[i] for v in col) for i in range(3)),
+            falsity=tuple(max(v.falsity[i] for v in col) for i in range(3)),
             )
-            for i in range(len(alternatives)):
+        else:
+        # Sayısal kriterler için
+            col_valid = [v for v in col if isinstance(v, (int, float))]
+            min_val = min(col_valid)
+            max_val = max(col_valid)
+    for i in range(len(alternatives)):
                 X_norm_obj[i, j] = normalize_t2nn(X[i, j], min_val, max_val, ctype)
 
     X_norm = np.array([[t2nn_score(cell) for cell in row] for row in X_norm_obj])
