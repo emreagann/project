@@ -43,16 +43,15 @@ if uploaded_file:
         df_info = pd.read_excel(uploaded_file, sheet_name=1)
         if any(col.lower().startswith(("truth", "t", "indeterminacy", "i", "falsity", "f")) for col in df_raw.columns):
             st.stop()
-
     except:
         st.error("Info sheet not found.")
         st.stop()
 
+    criteria = df_raw.index.tolist()
+    alternatives = df_raw.columns.tolist()
+    data_raw = df_raw.T.values  # <--- burayı düzelttik
+    df_info.columns = df_info.columns.str.strip().str.lower()
 
-criteria = df_raw.index.tolist()
-alternatives = df_raw.columns.tolist() 
-data_raw = df_raw.T.values
-df_info.columns = df_info.columns.str.strip().str.lower()
 
 weights_col = "weight" if "weight" in df_info.columns else "weights"
 weights = [float(str(w).replace(',', '.')) for w in df_info[weights_col]]
