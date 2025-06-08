@@ -48,7 +48,7 @@ if uploaded_file:
 
 
     try:
-        df_info = pd.read_excel(uploaded_file, sheet_name=1)
+       df_info = pd.read_excel(uploaded_file, sheet_name=1, header=1)
     except:
         st.error("Info sheet not found.")
         st.stop()
