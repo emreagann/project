@@ -44,7 +44,9 @@ criteria = []
 # -------------------- YÜKLEME MODU --------------------
 if uploaded_file:
     df_raw = pd.read_excel(uploaded_file, sheet_name=0, index_col=0).dropna(how='all')
+    df_raw.index = df_raw.index.astype(str)
     df_raw = df_raw[df_raw.index.str.lower().str.startswith("c")]
+
 
 
     try:
