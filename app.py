@@ -57,7 +57,10 @@ if uploaded_file:
         st.warning("Doğrudan T2NN değerleri girilmiş. Bu sürüm sadece aralık formatını destekler.")
         st.stop()
 
-    df_info.columns = df_info.columns.str.strip().str.lower()
+      df_info.columns = df_info.columns.str.strip().str.lower()
+
+    df_info = df_info[df_info["criteria no"].astype(str).str.lower().str.startswith("c")]
+
     weights_col = "weight" if "weight" in df_info.columns else "weights"
 
     try:
@@ -65,6 +68,8 @@ if uploaded_file:
     except:
         st.error("Ağırlıklar sayıya çevrilemedi.")
         st.stop()
+
+    types = df_info["type"].tolist()
 
     criteria = df_raw.index.tolist()
     alternatives = df_raw.columns.tolist()
@@ -81,7 +86,6 @@ if uploaded_file:
         for row in X
     ])
 
-    types = df_info["type"].tolist()
 
 # -------------------- MANUEL GİRİŞ MODU --------------------
 if not uploaded_file:
