@@ -53,8 +53,8 @@ if uploaded_file:
     df_info.columns = df_info.columns.str.strip().str.lower()
 
 
-weights_col = "weight" if "weight" in df_info.columns else "weights"
-weights = [float(str(w).replace(',', '.')) for w in df_info[weights_col]]
+    weights_col = "weight" if "weight" in df_info.columns else "weights"
+    weights = [float(str(w).replace(',', '.')) for w in df_info[weights_col]]
 
 X = np.array([[convert_range_to_t2n(cell) for cell in row] for row in data_raw], dtype=object)
 
