@@ -56,17 +56,17 @@ if uploaded_file:
     weights_col = "weight" if "weight" in df_info.columns else "weights"
     weights = [float(str(w).replace(',', '.')) for w in df_info[weights_col]]
 
-X = np.array([[convert_range_to_t2n(cell) for cell in row] for row in data_raw], dtype=object)
+    X = np.array([[convert_range_to_t2n(cell) for cell in row] for row in data_raw], dtype=object)
 
-score_matrix = np.array([
-    [
+    score_matrix = np.array([
+        [
         np.mean(cell.truth) if isinstance(cell, T2NeutrosophicNumber)
         else float(cell) if isinstance(cell, (int, float)) 
         else 0.0
         for cell in row
-    ]
-    for row in X
-])
+        ]
+        for row in X
+        ])
 
 types = df_info["type"].tolist()
 if len(types) != score_matrix.shape[1]:  # sütun sayısı ile karşılaştırılmalı
