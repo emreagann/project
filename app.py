@@ -25,15 +25,14 @@ def convert_range_to_t2n(value):
                 return T2NeutrosophicNumber(truth, indeterminacy, falsity)
             except:
                 return None
-    else:
-        try:
-            val = float(value.replace(',', '.'))
-            truth = (val, val, val)
-            indeterminacy = (0.0, 0.0, 0.0)
-            falsity = (1 - val, 1 - val, 1 - val)
-            return T2NeutrosophicNumber(truth, indeterminacy, falsity)
-        except:
-            return None
+    try:
+        val = float(value.replace(',', '.'))
+        truth = (val, val, val)
+        indeterminacy = (0.0, 0.0, 0.0)
+        falsity = (1 - val, 1 - val, 1 - val)
+        return T2NeutrosophicNumber(truth, indeterminacy, falsity)
+    except:
+        return None
 
 uploaded_file = st.file_uploader("Upload your Excel file", type=["xlsx"])
 
@@ -61,9 +60,7 @@ if uploaded_file:
     df_weights["criteria no"] = df_weights["criteria no"].astype(str).str.strip().str.upper()
     df_sub["criteria no"] = df_sub["criteria no"].astype(str).str.strip().str.upper()
 
-    weights = []
-    attributes = []
-    perspectives = []
+    weights, attributes, perspectives = [], [], []
 
     for crit in criteria:
         crit_code = crit.strip().upper()
@@ -77,12 +74,14 @@ if uploaded_file:
         weights.append(float(str(weight_row.iloc[0]["weight"]).replace(',', '.')))
         attribute = sub_row.iloc[0]["sub-criteria attributes"].strip().lower()
         perspective = sub_row.iloc[0]["evaluation perspective"].strip().lower()
+
         if perspective not in {"quantitative", "qualitative"}:
             st.error(f"{crit} için geçersiz evaluation perspective: {perspective}")
             st.stop()
         if attribute not in {"benefit", "cost"}:
             st.error(f"{crit} için geçersiz sub-criteria attribute: {attribute}")
             st.stop()
+
         attributes.append(attribute)
         perspectives.append(perspective)
 
@@ -99,34 +98,34 @@ if uploaded_file:
     for j in range(len(criteria)):
         col = [x[j] for x in X]
 
-         if perspectives[j] == "quantitative":
-        col_valid = [v for v in col if isinstance(v, T2NeutrosophicNumber)]
-        if not col_valid:
-            st.error(f"{criteria[j]} sütununda geçerli T2NN değeri yok. Verileri kontrol et.")
-            st.stop()
+        if perspectives[j] == "quantitative":
+            col_valid = [v for v in col if isinstance(v, T2NeutrosophicNumber)]
+            if not col_valid:
+                st.error(f"{criteria[j]} sütununda geçerli T2NN değeri yok. Verileri kontrol et.")
+                st.stop()
 
-        min_val = T2NeutrosophicNumber(
-            truth=tuple(min(v.truth[i] for v in col_valid) for i in range(3)),
-            indeterminacy=tuple(min(v.indeterminacy[i] for v in col_valid) for i in range(3)),
-            falsity=tuple(min(v.falsity[i] for v in col_valid) for i in range(3)),
-        )
-        max_val = T2NeutrosophicNumber(
-            truth=tuple(max(v.truth[i] for v in col_valid) for i in range(3)),
-            indeterminacy=tuple(max(v.indeterminacy[i] for v in col_valid) for i in range(3)),
-            falsity=tuple(max(v.falsity[i] for v in col_valid) for i in range(3)),
-        )
-        for i in range(len(alternatives)):
-            X_norm_obj[i, j] = normalize_t2nn(X[i, j], min_val, max_val, attributes[j])
-    else:
-        col_valid = [v for v in col if isinstance(v, (int, float))]
-        min_val = min(col_valid)
-        max_val = max(col_valid)
-        for i in range(len(alternatives)):
-            val = X[i, j]
-            if max_val - min_val == 0:
-                X_norm_obj[i, j] = 0.0
-            else:
-                X_norm_obj[i, j] = (val - min_val) / (max_val - min_val) if attributes[j] == "benefit" else (max_val - val) / (max_val - min_val)
+            min_val = T2NeutrosophicNumber(
+                truth=tuple(min(v.truth[i] for v in col_valid) for i in range(3)),
+                indeterminacy=tuple(min(v.indeterminacy[i] for v in col_valid) for i in range(3)),
+                falsity=tuple(min(v.falsity[i] for v in col_valid) for i in range(3)),
+            )
+            max_val = T2NeutrosophicNumber(
+                truth=tuple(max(v.truth[i] for v in col_valid) for i in range(3)),
+                indeterminacy=tuple(max(v.indeterminacy[i] for v in col_valid) for i in range(3)),
+                falsity=tuple(max(v.falsity[i] for v in col_valid) for i in range(3)),
+            )
+            for i in range(len(alternatives)):
+                X_norm_obj[i, j] = normalize_t2nn(X[i, j], min_val, max_val, attributes[j])
+        else:
+            col_valid = [v for v in col if isinstance(v, (int, float))]
+            min_val = min(col_valid)
+            max_val = max(col_valid)
+            for i in range(len(alternatives)):
+                val = X[i, j]
+                if max_val - min_val == 0:
+                    X_norm_obj[i, j] = 0.0
+                else:
+                    X_norm_obj[i, j] = (val - min_val) / (max_val - min_val) if attributes[j] == "benefit" else (max_val - val) / (max_val - min_val)
 
     X_norm = np.array([[t2nn_score(cell) for cell in row] for row in X_norm_obj])
 
