@@ -51,7 +51,7 @@ if uploaded_file:
 
 criteria = df_raw.index.tolist()
 alternatives = df_raw.columns.tolist() 
-data_raw = df_raw.values
+data_raw = df_raw.values.T 
 df_info.columns = df_info.columns.str.strip().str.lower()
 
 weights_col = "weight" if "weight" in df_info.columns else "weights"
