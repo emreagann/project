@@ -18,8 +18,9 @@ def convert_range_to_t2n(value):
                 low = float(parts[0].replace(',', '.'))
                 high = float(parts[1].replace(',', '.'))
                 if low == high:
-                    return low
-                mid = (low + high) / 2
+                    mid = low
+                else:
+                    mid = (low + high) / 2
                 indet = (high - low) / 2
                 truth = (low, mid, high)
                 indeterminacy = (indet, indet, indet)
@@ -28,7 +29,12 @@ def convert_range_to_t2n(value):
             except:
                 return None
     try:
-        return float(value.replace(',', '.'))
+        value = float(value.replace(',', '.'))
+        return T2NeutrosophicNumber(
+            truth=(value, value, value),
+            indeterminacy=(0.0, 0.0, 0.0),
+            falsity=(1 - value, 1 - value, 1 - value)
+        )
     except:
         return None
 
