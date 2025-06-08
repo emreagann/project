@@ -144,7 +144,7 @@ df_distance = pd.DataFrame(Distance_matrix, index=alternatives, columns=criteria
 df_scores = pd.DataFrame({"TOTAL SCORE": Total_scores}, index=alternatives).sort_values(by="TOTAL SCORE", ascending=False)
 
 st.subheader("Original Decision Matrix (Performance Values)")
-st.dataframe(df_original.style.format("{:.3f}"))
+st.dataframe(df_original.style.format("{:.6f}"))
 
 st.subheader("Normalized Matrix")
 st.dataframe(df_norm.style.format("{:.4f}"))
