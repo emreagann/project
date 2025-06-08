@@ -6,7 +6,6 @@ from t2 import T2NeutrosophicNumber
 
 st.title("MABAC for Ship Fuel Selection using T2 Neutrosophic Numbers")
 
-# Dönüştürücü: aralık -> T2NN
 def convert_range_to_t2n(value):
     if pd.isna(value):
         return None
@@ -43,12 +42,10 @@ if uploaded_file:
         st.error("Dosya okunamadı veya beklenen sayfalar bulunamadı.")
         st.stop()
 
-    # Verileri alma
     criteria = df_alt.index.tolist()
     alternatives = df_alt.columns.tolist()
-    data_raw = df_alt.values.T  # Alternatifler satır, kriterler sütun olacak şekilde transpoze et
+    data_raw = df_alt.values.T  
 
-    # T2NN dönüşüm
     X = np.array([[convert_range_to_t2n(cell) for cell in row] for row in data_raw], dtype=object)
     score_matrix = np.array([
         [
@@ -60,7 +57,6 @@ if uploaded_file:
         for row in X
     ])
 
-    # Ağırlık ve türleri alma
     df_info.columns = df_info.columns.str.strip().str.lower()
     if "weight" not in df_info.columns or "type" not in df_info.columns or "criteria no" not in df_info.columns:
         st.error("Criteria Weights sayfasında gerekli sütunlar eksik (criteria no, type, weight).")
@@ -81,7 +77,6 @@ if uploaded_file:
         st.error(f"Ağırlık ve tür bilgileri alınırken hata: {e}")
         st.stop()
 
-    # Normalizasyon
     X_norm = np.zeros_like(score_matrix)
     for j, ctype in enumerate(types):
         col = score_matrix[:, j]
@@ -93,17 +88,16 @@ if uploaded_file:
         else:
             X_norm[:, j] = (max_val - col) / (max_val - min_val)
 
-    # Ağırlıklı normalizasyon (V)
     V_numeric = X_norm * np.array(weights)
 
-    # Sınır yaklaşım alanı (G)
+    
     G_vector = np.prod(V_numeric, axis=0) ** (1 / V_numeric.shape[0])
 
-    # Mesafe matrisi ve toplam puanlar
+
     Distance_matrix = V_numeric - G_vector
     Total_scores = Distance_matrix.sum(axis=1)
 
-    # DataFrame sonuçları
+
     df_original = pd.DataFrame(score_matrix, index=alternatives, columns=criteria)
     df_norm = pd.DataFrame(X_norm, index=alternatives, columns=criteria)
     df_weighted = pd.DataFrame(V_numeric, index=alternatives, columns=criteria)
@@ -111,7 +105,7 @@ if uploaded_file:
     df_distance = pd.DataFrame(Distance_matrix, index=alternatives, columns=criteria)
     df_scores = pd.DataFrame({"TOTAL SCORE": Total_scores}, index=alternatives).sort_values(by="TOTAL SCORE", ascending=False)
 
-    # Sonuçlar
+
     st.subheader("Original Decision Matrix (Performance Values)")
     st.dataframe(df_original.style.format("{:.3f}"))
 
@@ -139,5 +133,4 @@ if uploaded_file:
 
     best = df_scores.iloc[0]
     st.success(f"Best Alternative: **{best.name}** with Score: **{best['TOTAL SCORE']:.4f}**")
-else:
-    st.info("Lütfen bir Excel dosyası yükleyin.")
+
