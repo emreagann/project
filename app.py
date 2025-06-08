@@ -39,6 +39,7 @@ if uploaded_file:
         df_alt = pd.read_excel(uploaded_file, sheet_name="Alternatives", index_col=0, skiprows=1)
         df_info = pd.read_excel(uploaded_file, sheet_name="Criteria Weights")
     except:
+        st.error("Excel sheets not found or format incorrect.")
         st.stop()
 
     criteria = df_alt.index.tolist()
@@ -48,7 +49,8 @@ if uploaded_file:
     X = np.array([[convert_range_to_t2n(cell) for cell in row] for row in data_raw], dtype=object)
 
     df_info.columns = df_info.columns.str.strip().str.lower()
-    if "weight" not in df_info.columns or "type" not in df_info.columns or "criteria no" not in df_info.columns:
+    if not set(["weight", "type", "criteria no"]).issubset(df_info.columns):
+        st.error("Criteria Weights sheet must include: 'criteria no', 'type', 'weight'")
         st.stop()
 
     try:
@@ -63,33 +65,38 @@ if uploaded_file:
             weights.append(float(str(crit_info.iloc[0]["weight"]).replace(',', '.')))
             types.append(crit_info.iloc[0]["type"].strip().lower())
     except Exception as e:
-        st.error(f"Ağırlık ve tür bilgileri alınırken hata: {e}")
+        st.error(f"Ağırlık ve tür bilgileri okunurken hata: {e}")
         st.stop()
 
     X_norm_obj = np.empty_like(X, dtype=object)
-    for j in range(len(criteria)):
+    for j, ctype in enumerate(types):
         col = [x[j] for x in X]
         col_valid = [v for v in col if isinstance(v, T2NeutrosophicNumber)]
 
         if not col_valid:
-            st.error(f"{criteria[j]} sütununda geçerli T2NN değeri yok. Verileri kontrol et.")
-            st.stop()
-
-        min_val = T2NeutrosophicNumber(
-            truth=tuple(min(v.truth[i] for v in col_valid) for i in range(3)),
-            indeterminacy=tuple(min(v.indeterminacy[i] for v in col_valid) for i in range(3)),
-            falsity=tuple(min(v.falsity[i] for v in col_valid) for i in range(3)),
-        )
-        max_val = T2NeutrosophicNumber(
-            truth=tuple(max(v.truth[i] for v in col_valid) for i in range(3)),
-            indeterminacy=tuple(max(v.indeterminacy[i] for v in col_valid) for i in range(3)),
-            falsity=tuple(max(v.falsity[i] for v in col_valid) for i in range(3)),
-        )
-        for i in range(len(alternatives)):
-            X_norm_obj[i, j] = normalize_t2nn(X[i, j], min_val, max_val, types[j])
+            # Handle numerical column
+            vals = [v for v in col if isinstance(v, (int, float))]
+            min_val, max_val = min(vals), max(vals)
+            for i in range(len(alternatives)):
+                if isinstance(X[i, j], (int, float)):
+                    X_norm_obj[i, j] = (X[i, j] - min_val) / (max_val - min_val) if ctype == "benefit" else (max_val - X[i, j]) / (max_val - min_val)
+                else:
+                    X_norm_obj[i, j] = 0.0
+        else:
+            min_val = T2NeutrosophicNumber(
+                truth=tuple(min(v.truth[i] for v in col_valid) for i in range(3)),
+                indeterminacy=tuple(min(v.indeterminacy[i] for v in col_valid) for i in range(3)),
+                falsity=tuple(min(v.falsity[i] for v in col_valid) for i in range(3)),
+            )
+            max_val = T2NeutrosophicNumber(
+                truth=tuple(max(v.truth[i] for v in col_valid) for i in range(3)),
+                indeterminacy=tuple(max(v.indeterminacy[i] for v in col_valid) for i in range(3)),
+                falsity=tuple(max(v.falsity[i] for v in col_valid) for i in range(3)),
+            )
+            for i in range(len(alternatives)):
+                X_norm_obj[i, j] = normalize_t2nn(X[i, j], min_val, max_val, ctype)
 
     X_norm = np.array([[t2nn_score(cell) for cell in row] for row in X_norm_obj])
-
     V_numeric = X_norm * np.array(weights)
     G_vector = np.prod(V_numeric, axis=0) ** (1 / V_numeric.shape[0])
     Distance_matrix = V_numeric - G_vector
