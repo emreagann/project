@@ -53,15 +53,25 @@ if uploaded_file:
     data_raw = df_raw.iloc[:, 1:].values 
     df_info.columns = df_info.columns.str.strip().str.lower()
 
-    types = df_info["type"].tolist()
-    if len(types) != score_matrix.shape[1]:
-        st.error(f"Kriter türleri (types) sayısı ({len(types)}) ile veri sütunu sayısı ({score_matrix.shape[1]}) uyuşmuyor.")
-        st.stop()
+ 
     weights_col = "weight" if "weight" in df_info.columns else "weights"
     weights = [float(str(w).replace(',', '.')) for w in df_info[weights_col]]
 
     X = np.array([[convert_range_to_t2n(cell) for cell in row] for row in data_raw], dtype=object)
 
+score_matrix = np.array([
+    [
+        np.mean(cell.truth) if isinstance(cell, T2NeutrosophicNumber)
+        else float(cell) if isinstance(cell, (int, float)) 
+        else 0.0
+        for cell in row
+    ]
+    for row in X
+])
+   types = df_info["type"].tolist()
+    if len(types) != score_matrix.shape[1]:
+        st.error(f"Kriter türleri (types) sayısı ({len(types)}) ile veri sütunu sayısı ({score_matrix.shape[1]}) uyuşmuyor.")
+        st.stop()
 else:
     st.subheader("Manual Data Entry")
 
@@ -94,17 +104,8 @@ else:
         if not submitted:
             st.stop()
 
-    X = np.array([[convert_range_to_t2n(cell) for cell in row] for row in data_matrix], dtype=object).T
+    X = np.array([[convert_range_to_t2n(cell) for cell in row] for row in data_matrix], dtype=object)
 
-score_matrix = np.array([
-    [
-        np.mean(cell.truth) if isinstance(cell, T2NeutrosophicNumber)
-        else float(cell) if isinstance(cell, (int, float)) 
-        else 0.0
-        for cell in row
-    ]
-    for row in X
-])
 
 
 X_norm = np.array(score_matrix, copy=True)
