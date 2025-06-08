@@ -121,4 +121,3 @@ if uploaded_file:
 
     best = df_scores.iloc[0]
     st.success(f"Best Alternative: **{best.name}** with Score: **{best['TOTAL SCORE']:.4f}**")
-
