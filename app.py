@@ -75,8 +75,8 @@ if uploaded_file:
             if crit_info.empty:
                 st.error(f"{crit} için ağırlık/tip bilgisi bulunamadı.")
                 st.stop()
-            weights.append(float(str(crit_info["weight"].values[0]).replace(",", ".")))
-            types.append(crit_info["type"].values[0].strip().lower())
+            weights.append(float(str(crit_info.iloc[0]["weight"]).replace(',', '.')))
+            types.append(crit_info.iloc[0]["type"].strip().lower())
     except Exception as e:
         st.error(f"Ağırlık ve tür bilgileri alınırken hata: {e}")
         st.stop()
