@@ -72,7 +72,7 @@ if uploaded_file:
 
     criteria = df_raw.index.tolist()
     alternatives = df_raw.columns.tolist()
-    data_raw = df_raw.T.values
+    data_raw = df_raw.values
 
     X = np.array([[convert_range_to_t2n(cell) for cell in row] for row in data_raw], dtype=object)
     score_matrix = np.array([
