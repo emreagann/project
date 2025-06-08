@@ -41,7 +41,6 @@ weights = None
 alternatives = []
 criteria = []
 
-# -------------------- YÜKLEME MODU --------------------
 if uploaded_file:
     df_raw = pd.read_excel(uploaded_file, sheet_name=0, index_col=0).dropna(how='all')
     df_raw.index = df_raw.index.astype(str)
@@ -60,8 +59,6 @@ if uploaded_file:
         st.stop()
 
     df_info.columns = df_info.columns.str.strip().str.lower()
-
-    df_info = df_info[df_info["criteria no"].astype(str).str.lower().str.startswith("c")]
 
     weights_col = "weight" if "weight" in df_info.columns else "weights"
 
