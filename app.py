@@ -54,8 +54,8 @@ if uploaded_file:
         st.error("Info sheet not found.")
         st.stop()
 
-    criteria = df_raw["Criteria"].tolist() 
-    alternatives = df_raw.columns[1:].tolist() 
+    criteria = df_raw.index.tolist()
+    alternatives = df_raw.columns.tolist() 
     data_raw = df_raw.iloc[:, 1:].values 
     df_info.columns = df_info.columns.str.strip().str.lower()
 
