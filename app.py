@@ -37,9 +37,9 @@ uploaded_file = st.file_uploader("Upload your Excel file", type=["xlsx"])
 if uploaded_file:
     try:
         df_alt = pd.read_excel(uploaded_file, sheet_name="Alternatives", index_col=0, skiprows=1)
-        df_info = pd.read_excel(uploaded_file, sheet_name="Criteria Weights")
+        df_weights = pd.read_excel(uploaded_file, sheet_name="Criteria Weights")
+        df_sub = pd.read_excel(uploaded_file, sheet_name="Sub-Criteria")
     except:
-        st.error("Excel sheets not found or format incorrect.")
         st.stop()
 
     criteria = df_alt.index.tolist()
@@ -48,52 +48,61 @@ if uploaded_file:
 
     X = np.array([[convert_range_to_t2n(cell) for cell in row] for row in data_raw], dtype=object)
 
-    df_info.columns = df_info.columns.str.strip().str.lower()
-    if not set(["weight", "type", "criteria no"]).issubset(df_info.columns):
-        st.error("Criteria Weights sheet must include: 'criteria no', 'type', 'weight'")
+    df_weights.columns = df_weights.columns.str.strip().str.lower()
+    df_sub.columns = df_sub.columns.str.strip().str.lower()
+
+    required_weight_cols = {"criteria no", "weight"}
+    required_sub_cols = {"code", "evaluation perspective"}
+    if not required_weight_cols.issubset(df_weights.columns) or not required_sub_cols.issubset(df_sub.columns):
+        st.error("Criteria Weights sheet must include: 'criteria no', 'weight'; Sub-Criteria sheet must include: 'code', 'evaluation perspective'")
         st.stop()
 
-    try:
-        weights = []
-        types = []
-        df_info["criteria no"] = df_info["criteria no"].astype(str).str.strip().str.upper()
-        for crit in criteria:
-            crit_info = df_info[df_info["criteria no"] == crit.strip().upper()]
-            if crit_info.empty:
-                st.error(f"{crit} için ağırlık/tip bilgisi bulunamadı.")
-                st.stop()
-            weights.append(float(str(crit_info.iloc[0]["weight"]).replace(',', '.')))
-            types.append(crit_info.iloc[0]["type"].strip().lower())
-    except Exception as e:
-        st.error(f"Ağırlık ve tür bilgileri okunurken hata: {e}")
-        st.stop()
+    df_weights["criteria no"] = df_weights["criteria no"].astype(str).str.strip().str.upper()
+    df_sub["code"] = df_sub["code"].astype(str).str.strip().str.upper()
+
+    weights = []
+    types = []
+
+    for crit in criteria:
+        crit_code = crit.strip().upper()
+        weight_row = df_weights[df_weights["criteria no"] == crit_code]
+        sub_row = df_sub[df_sub["code"] == crit_code]
+
+        if weight_row.empty or sub_row.empty:
+            st.error(f"{crit} için ağırlık veya perspective bilgisi eksik.")
+            st.stop()
+
+        weights.append(float(str(weight_row.iloc[0]["weight"]).replace(',', '.')))
+        perspective = sub_row.iloc[0]["evaluation perspective"].strip().lower()
+        if perspective not in {"benefit", "cost"}:
+            st.error(f"{crit} için geçersiz perspective: {perspective}")
+            st.stop()
+        types.append(perspective)
 
     X_norm_obj = np.empty_like(X, dtype=object)
     for j in range(len(criteria)):
         col = [x[j] for x in X]
-        ctype = types[j]
+        col_valid = [v for v in col if isinstance(v, T2NeutrosophicNumber)]
 
-        if all(isinstance(v, T2NeutrosophicNumber) for v in col):
-        # T2NN için min/max
-            min_val = T2NeutrosophicNumber(
-            truth=tuple(min(v.truth[i] for v in col) for i in range(3)),
-            indeterminacy=tuple(min(v.indeterminacy[i] for v in col) for i in range(3)),
-            falsity=tuple(min(v.falsity[i] for v in col) for i in range(3)),
-            )
-            max_val = T2NeutrosophicNumber(
-            truth=tuple(max(v.truth[i] for v in col) for i in range(3)),
-            indeterminacy=tuple(max(v.indeterminacy[i] for v in col) for i in range(3)),
-            falsity=tuple(max(v.falsity[i] for v in col) for i in range(3)),
-            )
-        else:
-        # Sayısal kriterler için
-            col_valid = [v for v in col if isinstance(v, (int, float))]
-            min_val = min(col_valid)
-            max_val = max(col_valid)
-    for i in range(len(alternatives)):
-                X_norm_obj[i, j] = normalize_t2nn(X[i, j], min_val, max_val, ctype)
+        if not col_valid:
+            st.error(f"{criteria[j]} sütununda geçerli T2NN değeri yok. Verileri kontrol et.")
+            st.stop()
+
+        min_val = T2NeutrosophicNumber(
+            truth=tuple(min(v.truth[i] for v in col_valid) for i in range(3)),
+            indeterminacy=tuple(min(v.indeterminacy[i] for v in col_valid) for i in range(3)),
+            falsity=tuple(min(v.falsity[i] for v in col_valid) for i in range(3)),
+        )
+        max_val = T2NeutrosophicNumber(
+            truth=tuple(max(v.truth[i] for v in col_valid) for i in range(3)),
+            indeterminacy=tuple(max(v.indeterminacy[i] for v in col_valid) for i in range(3)),
+            falsity=tuple(max(v.falsity[i] for v in col_valid) for i in range(3)),
+        )
+        for i in range(len(alternatives)):
+            X_norm_obj[i, j] = normalize_t2nn(X[i, j], min_val, max_val, types[j])
 
     X_norm = np.array([[t2nn_score(cell) for cell in row] for row in X_norm_obj])
+
     V_numeric = X_norm * np.array(weights)
     G_vector = np.prod(V_numeric, axis=0) ** (1 / V_numeric.shape[0])
     Distance_matrix = V_numeric - G_vector
