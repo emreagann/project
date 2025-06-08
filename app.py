@@ -87,7 +87,7 @@ if uploaded_file:
     for j, crit in enumerate(criteria):
         for i in range(len(alternatives)):
             val = data_raw[i][j]
-            if perspective[j] == "quantitative":
+            if perspectives[j] == "quantitative":
                 X[i, j] = convert_range_to_t2n(val)
             else:
                 X[i, j] = val
