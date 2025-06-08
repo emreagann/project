@@ -64,7 +64,7 @@ if uploaded_file:
     weights = [float(str(w).replace(',', '.')) for w in df_info[weights_col]]
 
     data_raw = df_raw.iloc[:, 1:].values
-    X = np.array([[convert_range_to_t2n(cell) for cell in row] for row in data_raw], dtype=object)
+    X = np.array([[convert_range_to_t2n(cell) for cell in row] for row in data_raw], dtype=object).T
 
 else:
     st.subheader("Manual Data Entry")
