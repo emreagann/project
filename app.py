@@ -52,13 +52,13 @@ if uploaded_file:
     df_sub.columns = df_sub.columns.str.strip().str.lower()
 
     required_weight_cols = {"criteria no", "weight"}
-    required_sub_cols = {"code", "evaluation perspective"}
+    required_sub_cols = {"criteria no", "evaluation perspective"}
     if not required_weight_cols.issubset(df_weights.columns) or not required_sub_cols.issubset(df_sub.columns):
-        st.error("Criteria Weights sheet must include: 'criteria no', 'weight'; Sub-Criteria sheet must include: 'code', 'evaluation perspective'")
+        st.error("Criteria Weights sheet must include: 'criteria no', 'weight'; Sub-Criteria sheet must include: 'criteria no', 'evaluation perspective'")
         st.stop()
 
     df_weights["criteria no"] = df_weights["criteria no"].astype(str).str.strip().str.upper()
-    df_sub["code"] = df_sub["code"].astype(str).str.strip().str.upper()
+    df_sub["criteria no"] = df_sub["criteria no"].astype(str).str.strip().str.upper()
 
     weights = []
     types = []
@@ -66,7 +66,7 @@ if uploaded_file:
     for crit in criteria:
         crit_code = crit.strip().upper()
         weight_row = df_weights[df_weights["criteria no"] == crit_code]
-        sub_row = df_sub[df_sub["code"] == crit_code]
+        sub_row = df_sub[df_sub["criteria no"] == crit_code]
 
         if weight_row.empty or sub_row.empty:
             st.error(f"{crit} için ağırlık veya perspective bilgisi eksik.")
