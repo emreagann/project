@@ -77,8 +77,8 @@ if uploaded_file:
         weights.append(float(str(weight_row.iloc[0]["weight"]).replace(',', '.')))
         attribute = sub_row.iloc[0]["sub-criteria attributes"].strip().lower()
         perspective = sub_row.iloc[0]["evaluation perspective"].strip().lower()
-        if attribute not in {"benefit", "cost"}:
-            st.error(f"{crit} için geçersiz sub-criteria attribute: {attribute}")
+        if perspective not in {"quantitative", "qualitative"}:
+            st.error(f"{crit} için geçersiz evaluation perspective: {perspective}")
             st.stop()
         attributes.append(attribute)
         perspectives.append(perspective)
@@ -95,8 +95,7 @@ if uploaded_file:
     X_norm_obj = np.empty_like(X, dtype=object)
     for j in range(len(criteria)):
         col = [x[j] for x in X]
-        col_valid = [v for v in col if isinstance(v, T2NeutrosophicNumber) or isinstance(v, (int, float))]
-
+        col_valid = [v for v in col if isinstance(v, T2NeutrosophicNumber)]
 
         if not col_valid:
             st.error(f"{criteria[j]} sütununda geçerli T2NN değeri yok. Verileri kontrol et.")
