@@ -80,13 +80,12 @@ if uploaded_file:
     X_norm = np.zeros_like(score_matrix)
     for j, ctype in enumerate(types):
         col = score_matrix[:, j]
-        min_val, max_val = np.min(col), np.max(col)
         if max_val == min_val:
             X_norm[:, j] = 0
         elif ctype == "benefit":
-            X_norm[:, j] = (col - min_val) / (max_val - min_val)
+            X_norm[:, j] = (col - np.min(col)) / (np.max(col) - np.min(col))
         else:
-            X_norm[:, j] = (max_val - col) / (max_val - min_val)
+            X_norm[:, j] = (np.max(col) - col) / (np.max(col) - np.min(col))
 
     V_numeric = X_norm * np.array(weights)
 
