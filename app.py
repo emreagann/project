@@ -80,7 +80,7 @@ elif input_mode == "Manual Entry":
     alternatives = decision_matrix.index.tolist()
 
 norm_scores = {crit: [] for crit in criteria}
-t2nn_scores_debug = {crit: [] for crit in criteria}  # NEW: For T2NN score debugging
+t2nn_scores_debug = {crit: [] for crit in criteria}
 
 for crit in criteria:
     is_quant = evals[crit] == "quantitative"
@@ -101,15 +101,15 @@ for crit in criteria:
                     a = b = float(val)
                 t2nn = convert_range_to_t2n(a, b)
                 score = t2nn.score()
-                t2nn_scores_debug[crit].append(score)
             else:
                 score = float(val)
-                t2nn_scores_debug[crit].append(score)
+            t2nn_scores_debug[crit].append(score)
         except Exception as e:
             score = 0
-            t2nn_scores_debug[crit].append(score)
+            t2nn_scores_debug[crit].append(None)
         col_scores.append(score)
     norm_scores[crit] = normalize_minmax(col_scores, benefit=is_benefit)
+
 quant_criteria = [c for c in criteria if evals[c] == "quantitative"]
 t2nn_df = pd.DataFrame({c: t2nn_scores_debug[c] for c in quant_criteria}, index=alternatives)
 def safe_formatter(x):
