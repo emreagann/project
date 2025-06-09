@@ -63,7 +63,7 @@ if uploaded_file:
     data_df = pd.read_excel(xls, sheet_name=0, header=None)
     weight_df = pd.read_excel(xls, sheet_name=1, header=None)
 
-    criteria = data_df.iloc[0, 2:].tolist()
+    criteria = [c for c in data.columns if c.startswith("C")]
     alternatives = data_df.iloc[:, 0].dropna().unique().tolist()
 
     # Kullanıcıdan kriter türü seçimi
