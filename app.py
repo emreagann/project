@@ -60,7 +60,7 @@ if uploaded_file:
     # --- Tüm kriterler için boş skor yapıları oluştur ---
     all_scores = {crit: [] for crit in criteria}
 
-    # --- Ham skorları hesapla (T2NN veya doğrudan) ---
+    # --- Her kriter için skorları hesapla ---
     for crit in criteria:
         for alt in alternatives:
             val = decision_matrix.loc[alt, crit]
@@ -74,19 +74,20 @@ if uploaded_file:
                 else:
                     a = b = float(val)
                 t2nn = convert_range_to_t2n(a, b)
-                all_scores[crit].append(t2nn.score())
+                score = t2nn.score()
+                all_scores[crit].append(score)
             else:
                 all_scores[crit].append(float(val))
 
-    # --- Tüm kriterleri normalize et ---
+    # --- Normalize işlemi ---
     norm_scores = []
     for i, alt in enumerate(alternatives):
         row = []
         for crit in criteria:
             values = all_scores[crit]
             is_benefit = types[crit].lower() == "benefit"
-            norm = normalize_qualitative(values, benefit=is_benefit)
-            row.append(norm[i])
+            normalized_values = normalize_qualitative(values, benefit=is_benefit)
+            row.append(normalized_values[i])
         norm_scores.append(row)
 
     norm_df = pd.DataFrame(norm_scores, columns=criteria, index=alternatives)
