@@ -79,8 +79,10 @@ elif input_mode == "Manual Entry":
     decision_matrix = st.data_editor(matrix_data, num_rows="dynamic", key="manual_input_matrix")
     alternatives = decision_matrix.index.tolist()
 
+# --- Initialize T2NN Score Debug Dictionary ---
+t2nn_scores_debug = {crit: [] for crit in criteria}  # Ensure no empty lists
+
 norm_scores = {crit: [] for crit in criteria}
-t2nn_scores_debug = {crit: [] for crit in criteria}  
 
 for crit in criteria:
     is_quant = evals[crit] == "quantitative"
@@ -101,22 +103,27 @@ for crit in criteria:
                 else:
                     a = b = float(val)
                 t2nn = convert_range_to_t2n(a, b)
-                score = t2nn.score() 
+                score = t2nn.score()
             else:
-                score = float(val)
+                score = float(val)  # For qualitative criteria, use the direct value
         except Exception as e:
-            score = 0  # veya None
+            score = 0  # Default value if error occurs
+        t2nn_scores_debug[crit].append(score)  # Add to debug list
         col_scores.append(score)
-
+    
     if is_quant:
         norm_scores[crit] = normalize_minmax(col_scores, benefit=is_benefit)
     else:
-        norm_scores[crit] = col_scores  # normalize etmeden doğrudan ata
+        norm_scores[crit] = col_scores  # Don't normalize qualitative scores
 
+# --- Check if all T2NN scores have values ---
+for crit in criteria:
+    if len(t2nn_scores_debug[crit]) != len(alternatives):
+        st.warning(f"{crit} için T2NN skor listesi eksik! {len(t2nn_scores_debug[crit])}/{len(alternatives)} değer var.")
 
+# Display T2NN scores for both quantitative and qualitative criteria
+t2nn_df = pd.DataFrame(t2nn_scores_debug, index=alternatives)
 
-quant_criteria = [c for c in criteria if evals[c] == "quantitative"]
-t2nn_df = pd.DataFrame({c: t2nn_scores_debug[c] for c in criteria}, index=alternatives)
 def safe_formatter(x):
     try:
         return f"{x:.5f}"
@@ -124,12 +131,14 @@ def safe_formatter(x):
         return ""
 
 st.subheader("T2NN Score Matrix (Before Normalization)")
-st.dataframe(t2nn_df.style.format(safe_formatter))  # Display T2NN debug matrix for both qualitative and quantitative
+st.dataframe(t2nn_df.style.format(safe_formatter))
 
+# --- Normalized Matrix ---
 norm_df = pd.DataFrame(norm_scores, columns=criteria, index=alternatives)
 st.subheader("Normalized Decision Matrix")
 st.dataframe(norm_df.style.format("{:.4f}"))
 
+# --- Weighted Normalized Matrix ---
 weighted_df = norm_df.copy()
 for crit in criteria:
     weighted_df[crit] = weighted_df[crit] * weights_dict[crit]
@@ -137,14 +146,17 @@ for crit in criteria:
 st.subheader("Weighted Normalized Matrix (V)")
 st.dataframe(weighted_df.fillna(0).style.format("{:.4f}"))
 
+# --- Border Approximation Area (B) ---
 B = weighted_df.apply(lambda col: col.prod()**(1/len(col)), axis=0)
 st.subheader("Border Approximation Area (B)")
 st.dataframe(B.to_frame().style.format("{:.4f}"))
 
+# --- MABAC Distance Matrix ---
 Q = weighted_df - B
 st.subheader("MABAC Distance Matrix (Q = V - B)")
 st.dataframe(Q.style.format("{:.4f}"))
 
+# --- Final MABAC Scores ---
 scores = Q.sum(axis=1)
 results = pd.DataFrame({"Scores": scores, "Ranking": scores.rank(ascending=False).astype(int)}, index=alternatives)
 st.subheader("MABAC Results and Ranking")
