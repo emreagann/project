@@ -10,11 +10,14 @@ class T2NN:
         self.F = F  # (F1, F2, F3)
 
     def score(self):
-        # Makaledeki Definition 4'e göre score fonksiyonu
-        t_score = 8 + self.T[0] + 2 * self.T[1] + self.T[2]
-        i_score = self.I[0] + 2 * self.I[1] + self.I[2]
-        f_score = self.F[0] + 2 * self.F[1] + self.F[2]
-        return (t_score - i_score - f_score) / 12
+        t = self.T
+        i = self.I
+        f = self.F
+        return (1/12) * (
+            8 + (t[0] + 2*t[1] + t[2])
+            - (i[0] + 2*i[1] + i[2])
+            - (f[0] + 2*f[1] + f[2])
+        )
 
 # --- Yardımcı fonksiyonlar ---
 def convert_range_to_t2n(a, b):
@@ -71,14 +74,14 @@ if uploaded_file:
             val = decision_matrix.loc[alt, crit]
             if is_quant:
                 if isinstance(val, str) and '-' in val:
-                    val = str(val).replace('–', '-')
+                    val = str(val).replace('–', '-').strip()
                     a, b = map(float, val.split('-'))
                 else:
-                    a = b = float(str(val).replace('–', '-'))
+                    a = b = float(str(val).replace('–', '-').strip())
                 t2nn = convert_range_to_t2n(a, b)
                 score = t2nn.score()
             else:
-                score = float(str(val).replace('–', '-'))
+                score = float(str(val).replace('–', '-').strip())
             col_scores.append(score)
         norm_scores[crit] = normalize_minmax(col_scores, benefit=is_benefit)
 
