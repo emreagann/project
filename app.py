@@ -9,24 +9,30 @@ class T2NN:
         self.F = F
 
     def score(self):
+        # T2NN skoru hesaplaması
         t_score = (self.T[0] + 2 * self.T[1] + self.T[2])
         i_score = (self.I[0] + 2 * self.I[1] + self.I[2])
         f_score = (self.F[0] + 2 * self.F[1] + self.F[2])
         return (1 / 12) * (8 + t_score - i_score - f_score)
 
 def convert_range_to_t2n(a, b):
-    if a == b:
-        T = (a / 10, a / 10, a / 10)
-        I = (0.0125, 0.0125, 0.0125)
-        F = (1 - a / 10, 1 - a / 10, 1 - a / 10)
-    else:
-        m = (a + b) / 2
-        T = (a / 10, m / 10, b / 10)
-        I = (0.0125, 0.0125, 0.0125)
-        F = (1 - b / 10, 1 - m / 10, 1 - a / 10)
+    # α, β, γ bileşenlerini belirleyip T2NN hesaplamak
+    m = (a + b) / 2
+    
+    # α, β, γ bileşenlerini doğru şekilde tanımlıyoruz
+    alpha = [a, m, b]  # αα, αβ, αγ
+    beta = [b, m, a]   # βα, ββ, βγ
+    gamma = [m, m, a]  # γα, γβ, γγ
+    
+    # T, I, F bileşenlerini hesaplıyoruz
+    T = [alpha[0]/10, (alpha[0] + beta[0])/20, beta[0]/10]
+    I = [0.0125, 0.0125, 0.0125]  # Sabit
+    F = [1 - beta[0]/10, 1 - (alpha[0] + beta[0])/20, 1 - alpha[0]/10]
+
     return T2NN(T, I, F)
 
 def normalize_minmax(values, benefit=True):
+    # Min-max normalizasyonu
     min_v, max_v = min(values), max(values)
     if max_v == min_v:
         return [0 for _ in values]
@@ -36,6 +42,7 @@ def normalize_minmax(values, benefit=True):
         return [(max_v - v)/(max_v - min_v) for v in values]
 
 st.title("Type-2 Neutrosophic MABAC Application")
+
 input_mode = st.radio("Select input method:", ["Upload from Excel", "Manual Entry"])
 
 if input_mode == "Upload from Excel":
@@ -79,10 +86,12 @@ elif input_mode == "Manual Entry":
     decision_matrix = st.data_editor(matrix_data, num_rows="dynamic", key="manual_input_matrix")
     alternatives = decision_matrix.index.tolist()
 
+# Debug ve normalizasyon için veri yapıları
 t2nn_scores_debug = {crit: [] for crit in criteria}  # Ensure no empty lists
 
 norm_scores = {crit: [] for crit in criteria}
 
+# T2NN hesaplamalarını yapıyoruz
 for crit in criteria:
     is_quant = evals[crit] == "quantitative"
     is_benefit = types[crit].lower() == "benefit"
@@ -115,48 +124,42 @@ for crit in criteria:
     else:
         norm_scores[crit] = col_scores  # Don't normalize qualitative scores
 
-# --- Check if all T2NN scores have values ---
-for crit in criteria:
-    if len(t2nn_scores_debug[crit]) != len(alternatives):
-        st.warning(f"{crit} için T2NN skor listesi eksik! {len(t2nn_scores_debug[crit])}/{len(alternatives)} değer var.")
-
-# Display T2NN scores for both quantitative and qualitative criteria
+# --- T2NN skoru ve normalizasyon işlemi ---
 t2nn_df = pd.DataFrame(t2nn_scores_debug, index=alternatives)
-
-def safe_formatter(x):
-    try:
-        return f"{x:.5f}"
-    except:
-        return ""
-
-st.subheader("T2NN Score Matrix (Before Normalization)")
-st.dataframe(t2nn_df.style.format(safe_formatter))
 
 # --- Normalized Matrix ---
 norm_df = pd.DataFrame(norm_scores, columns=criteria, index=alternatives)
-st.subheader("Normalized Decision Matrix")
-st.dataframe(norm_df.style.format("{:.4f}"))
 
 # --- Weighted Normalized Matrix ---
 weighted_df = norm_df.copy()
 for crit in criteria:
     weighted_df[crit] = weighted_df[crit] * weights_dict[crit]
 
-st.subheader("Weighted Normalized Matrix (V)")
-st.dataframe(weighted_df.fillna(0).style.format("{:.4f}"))
-
 # --- Border Approximation Area (B) ---
 B = weighted_df.apply(lambda col: col.prod()**(1/len(col)), axis=0)
-st.subheader("Border Approximation Area (B)")
-st.dataframe(B.to_frame().style.format("{:.4f}"))
 
 # --- MABAC Distance Matrix ---
 Q = weighted_df - B
-st.subheader("MABAC Distance Matrix (Q = V - B)")
-st.dataframe(Q.style.format("{:.4f}"))
 
 # --- Final MABAC Scores ---
 scores = Q.sum(axis=1)
 results = pd.DataFrame({"Scores": scores, "Ranking": scores.rank(ascending=False).astype(int)}, index=alternatives)
+
+# Streamlit interface
+st.subheader("T2NN Score Matrix (Before Normalization)")
+st.dataframe(t2nn_df.style.format("{:.5f}"))
+
+st.subheader("Normalized Decision Matrix")
+st.dataframe(norm_df.style.format("{:.4f}"))
+
+st.subheader("Weighted Normalized Matrix (V)")
+st.dataframe(weighted_df.fillna(0).style.format("{:.4f}"))
+
+st.subheader("Border Approximation Area (B)")
+st.dataframe(B.to_frame().style.format("{:.4f}"))
+
+st.subheader("MABAC Distance Matrix (Q = V - B)")
+st.dataframe(Q.style.format("{:.4f}"))
+
 st.subheader("MABAC Results and Ranking")
-st.dataframe(results.sort_values("Ranking")) 
+st.dataframe(results.sort_values("Ranking"))
