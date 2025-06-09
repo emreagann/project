@@ -10,21 +10,20 @@ class T2NN:
         self.F = F  # (F1, F2, F3)
 
     def score(self):
-        t = self.T
-        i = self.I
-        f = self.F
-        return (1/12) * (
-            8 + (t[0] + 2*t[1] + t[2])
-            - (i[0] + 2*i[1] + i[2])
-            - (f[0] + 2*f[1] + f[2])
-        )
+        t_score = (self.T[0] + 2 * self.T[1] + self.T[2])
+        i_score = (self.I[0] + 2 * self.I[1] + self.I[2])
+        f_score = (self.F[0] + 2 * self.F[1] + self.F[2])
+        return (1 / 12) * (8 + t_score - i_score - f_score)
 
 # --- Yardımcı fonksiyonlar ---
 def convert_range_to_t2n(a, b):
-    m = (a + b) / 2
-    T = (a/10, m/10, b/10)
-    I = (0.0125, 0.0125, 0.0125)
-    F = (1 - b/10, 1 - m/10, 1 - a/10)
+    if a == b:
+        T = (a/10, a/10, a/10)
+    else:
+        m = (a + b) / 2
+        T = (a/10, m/10, b/10)
+    I = (0.0, 0.0, 0.0)
+    F = (1 - b/10, 1 - ((a + b)/2)/10, 1 - a/10) if a != b else (1 - a/10, 1 - a/10, 1 - a/10)
     return T2NN(T, I, F)
 
 def normalize_minmax(values, benefit=True):
@@ -77,11 +76,11 @@ if uploaded_file:
                     val = str(val).replace('–', '-').strip()
                     a, b = map(float, val.split('-'))
                 else:
-                    a = b = float(str(val).replace('–', '-').strip())
+                    a = b = float(str(val).replace('–', '-'))
                 t2nn = convert_range_to_t2n(a, b)
                 score = t2nn.score()
             else:
-                score = float(str(val).replace('–', '-').strip())
+                score = float(str(val).replace('–', '-'))
             col_scores.append(score)
         norm_scores[crit] = normalize_minmax(col_scores, benefit=is_benefit)
 
