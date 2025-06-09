@@ -41,7 +41,7 @@ if uploaded_file is None:
 
 if uploaded_file:
     xls = pd.ExcelFile(uploaded_file)
-    decision_matrix = pd.read_excel(xls, sheet_name="Alternatives", index_col=0)
+    decision_matrix = pd.read_excel(xls, sheet_name="Alternatives", header=1, index_col=0)
     weights = pd.read_excel(xls, sheet_name="Criteria Weights")
     sub_criteria = pd.read_excel(xls, sheet_name="Sub-Criteria")
 
@@ -67,7 +67,7 @@ if uploaded_file:
             if evals[crit] == "quantitative":
                 # Aralık mı?
                 if isinstance(val, str) and '-' in val:
-                    a, b = map(float, val.split('-'))
+                    a, b = map(float, val.replace("–", "-").split('-'))
                 else:
                     a = b = float(val)
                 t2nn = convert_range_to_t2n(a, b)
