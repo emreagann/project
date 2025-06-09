@@ -81,7 +81,7 @@ if uploaded_file:
         for i in range(len(alternatives)):
             val = data_raw[i][j]
             if perspectives[j] == "quantitative":
-                X[i, j] = convert_range_to_mean();
+                X[i, j] = convert_range_to_mean(val);
             else:
                 X[i, j] = float(str(val).replace(',', '.')) if val != '' else 0.0
 
