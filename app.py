@@ -47,7 +47,7 @@ if uploaded_file:
 
     # Sütun isimlerini normalize et
     sub_criteria.columns = sub_criteria.columns.str.strip().str.lower()
-    weights.columns = weights.columns.str.strip()
+    weights.columns = weights.columns.str.strip().str.lower()
 
     criteria = decision_matrix.columns.tolist()
     alternatives = decision_matrix.index.tolist()
@@ -55,7 +55,7 @@ if uploaded_file:
     # Kriter türleri
     types = dict(zip(sub_criteria['criteria no'], sub_criteria['sub-criteria attributes']))
     evals = dict(zip(sub_criteria['criteria no'], sub_criteria['evaluation perspective']))
-    weights_dict = dict(zip(weights['Criteria'], weights['Weight']))
+    weights_dict = dict(zip(weights['criteria no'], weights['weight']))
 
     # --- Normalize matris oluştur ---
     norm_scores = []
