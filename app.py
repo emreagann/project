@@ -120,8 +120,8 @@ else:
     st.write("Excel dosyasını yüklemediniz. Lütfen verileri manuel olarak girin.")
 
     # Manuel veri girişi
-    num_alternatives = st.number_input("Alternatif sayısını girin", min_value=1, value=3)
-    num_criteria = st.number_input("Kriter sayısını girin", min_value=1, value=3)
+    num_alternatives = st.number_input("Alternatif sayısını girin", min_value=1)
+    num_criteria = st.number_input("Kriter sayısını girin", min_value=1)
 
     alternatives = []
     for i in range(num_alternatives):
