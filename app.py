@@ -5,13 +5,13 @@ import matplotlib.pyplot as plt
 
 # T2NN dönüşüm fonksiyonu
 def convert_to_t2nn(value, term_dict):
+    # Verilen dilsel terime karşılık gelen T2NN değerini döndürür
     return term_dict.get(value, ((0, 0, 0), (0, 0, 0), (0, 0, 0)))
 
 # Normalizasyon fonksiyonu
 def normalize_values(values, value_type='benefit'):
     min_val, max_val = min(values), max(values)
 
-    # Eğer min_val ile max_val aynıysa, tüm değerleri 1 olarak kabul et
     if min_val == max_val:
         return [1 for v in values]
 
