@@ -7,36 +7,22 @@ from t2 import T2NeutrosophicNumber, t2nn_score, normalize_t2nn
 st.title("MABAC for Ship Fuel Selection using T2 Neutrosophic Numbers")
 
 def convert_range_to_t2n(value):
+def convert_range_to_mean(value):
     if pd.isna(value):
-        return None
-    value = str(value).strip()
-    
-    if '-' in value or '–' in value:
+        return np.nan
+    if isinstance(value, str) and ('-' in value or '–' in value):
         value = value.replace('–', '-')
         parts = value.split('-')
-        if len(parts) == 2:
-            try:
-                low = float(parts[0].replace(',', '.'))
-                high = float(parts[1].replace(',', '.'))
-                mid = (low + high) / 2
-                indet = (high - low) / 2
-                truth = (low, mid, high)
-                indeterminacy = (indet, indet, indet)
-                falsity = tuple(1 - t for t in truth)
-                return T2NeutrosophicNumber(truth, indeterminacy, falsity)
-            except:
-                return None
+        try:
+            nums = [float(p.replace(',', '.')) for p in parts]
+            return sum(nums) / len(nums)
+        except:
+            return np.nan
     else:
         try:
-            val = float(value.replace(',', '.'))
-            # Eğer tek sayı verilmişse etrafında belirsizlik tanımla:
-            delta = 0.125
-            truth = (val - delta, val, val + delta)
-            indeterminacy = (delta / 2, delta / 2, delta / 2)
-            falsity = tuple(1 - t for t in truth)
-            return T2NeutrosophicNumber(truth, indeterminacy, falsity)
+            return float(str(value).replace(',', '.').replace(' ', ''))
         except:
-            return None
+            return np.nan
 
 
 
