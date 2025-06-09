@@ -10,6 +10,11 @@ def convert_to_t2nn(value, term_dict):
 # Normalizasyon fonksiyonu
 def normalize_values(values, value_type='benefit'):
     min_val, max_val = min(values), max(values)
+
+    # Eğer min_val ile max_val aynıysa, tüm değerleri 1 olarak kabul et
+    if min_val == max_val:
+        return [1 for v in values]
+
     if value_type == 'benefit':
         return [(v - min_val) / (max_val - min_val) for v in values]
     elif value_type == 'cost':
