@@ -16,8 +16,13 @@ class T2NN:
         return t_score - i_score - f_score
 
 # --- Yardımcı fonksiyonlar ---
-def convert_range_to_t2n(a, b):
-    m = (a + b) / 2
+def convert_to_t2n(val):
+    val = str(val).replace('–', '-')
+    if '-' in val:
+        a, b = map(float, val.split('-'))
+        m = (a + b) / 2
+    else:
+        a = b = m = float(val)
     T = (a/10, m/10, b/10)
     I = (0.0125, 0.0125, 0.0125)
     F = (1 - b/10, 1 - m/10, 1 - a/10)
@@ -69,12 +74,7 @@ if uploaded_file:
         for alt in alternatives:
             val = decision_matrix.loc[alt, crit]
             if is_quant:
-                if isinstance(val, str) and '-' in val:
-                    val = str(val).replace('–', '-')
-                    a, b = map(float, val.split('-'))
-                else:
-                    a = b = float(str(val).replace('–', '-'))
-                t2nn = convert_range_to_t2n(a, b)
+                t2nn = convert_to_t2n(val)
                 score = t2nn.score()
             else:
                 score = float(str(val).replace('–', '-'))
