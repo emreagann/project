@@ -70,13 +70,14 @@ if uploaded_file:
             val = decision_matrix.loc[alt, crit]
             if is_quant:
                 if isinstance(val, str) and '-' in val:
-                    a, b = map(float, val.replace("–", "-").split('-'))
+                    val = str(val).replace('–', '-')
+                    a, b = map(float, val.split('-'))
                 else:
-                    a = b = float(val)
+                    a = b = float(str(val).replace('–', '-'))
                 t2nn = convert_range_to_t2n(a, b)
                 score = t2nn.score()
             else:
-                score = float(str(val).replace(\"–\", \"-\"))
+                score = float(str(val).replace('–', '-'))
             col_scores.append(score)
         norm_scores[crit] = normalize_minmax(col_scores, benefit=is_benefit)
 
