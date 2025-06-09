@@ -10,11 +10,11 @@ class T2NN:
         self.F = F  # (F1, F2, F3)
 
     def score(self):
-        T = self.T[0] + 2*self.T[1] + self.T[2]
-        I = self.I[0] + 2*self.I[1] + self.I[2]
-        F = self.F[0] + 2*self.F[1] + self.F[2]
-        return (8 + T - I - F) / 12
-
+        # Makaledeki Definition 4'e göre score fonksiyonu
+        t_score = 8 + self.T[0] + 2 * self.T[1] + self.T[2]
+        i_score = self.I[0] + 2 * self.I[1] + self.I[2]
+        f_score = self.F[0] + 2 * self.F[1] + self.F[2]
+        return (t_score - i_score - f_score) / 12
 
 # --- Yardımcı fonksiyonlar ---
 def convert_range_to_t2n(a, b):
