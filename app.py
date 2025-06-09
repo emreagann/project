@@ -62,7 +62,7 @@ elif input_mode == "Manual Entry":
 
     with st.expander("Criteria Names and Weights"):
         criteria = [f"C{i+1}" for i in range(num_criteria)]
-        weights_dict = {c: st.slider(f"Weight for {c}", 0.0, 1.0, 0.33, step=0.01) for c in criteria}
+        weights_dict = {c: st.slider(f"Weight for {c}", 0.000, 1.000, 0.500, step=0.001) for c in criteria}
 
     with st.expander("Criteria Types and Evaluation Perspective"):
         types = {c: st.selectbox(f"{c} type", ["benefit", "cost"], key=f"type_{c}") for c in criteria}
