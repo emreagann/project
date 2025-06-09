@@ -57,12 +57,12 @@ if uploaded_file:
     evals = dict(zip(sub_criteria['criteria no'], sub_criteria['evaluation perspective']))
     weights_dict = dict(zip(weights['criteria no'], weights['weight']))
 
-    # --- Normalize matris oluştur ---
-    norm_scores = []
+    # --- Tüm kriterler için boş skor yapıları oluştur ---
+    all_scores = {crit: [] for crit in criteria}
 
-    for alt in alternatives:
-        row_scores = []
-        for crit in criteria:
+    # --- Ham skorları hesapla (T2NN veya doğrudan) ---
+    for crit in criteria:
+        for alt in alternatives:
             val = decision_matrix.loc[alt, crit]
             if evals[crit] == "quantitative":
                 if isinstance(val, str):
@@ -74,14 +74,20 @@ if uploaded_file:
                 else:
                     a = b = float(val)
                 t2nn = convert_range_to_t2n(a, b)
-                row_scores.append(t2nn.score())
+                all_scores[crit].append(t2nn.score())
             else:
-                # qualitative kriterler
-                all_vals = decision_matrix[crit].astype(float).tolist()
-                is_benefit = types[crit].lower() == "benefit"
-                normalized_vals = normalize_qualitative(all_vals, benefit=is_benefit)
-                row_scores.append(normalized_vals[alternatives.index(alt)])
-        norm_scores.append(row_scores)
+                all_scores[crit].append(float(val))
+
+    # --- Tüm kriterleri normalize et ---
+    norm_scores = []
+    for i, alt in enumerate(alternatives):
+        row = []
+        for crit in criteria:
+            values = all_scores[crit]
+            is_benefit = types[crit].lower() == "benefit"
+            norm = normalize_qualitative(values, benefit=is_benefit)
+            row.append(norm[i])
+        norm_scores.append(row)
 
     norm_df = pd.DataFrame(norm_scores, columns=criteria, index=alternatives)
     st.subheader("Normalize Edilmiş Karar Matrisi")
