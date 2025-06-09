@@ -107,7 +107,7 @@ for crit in criteria:
                 t2nn_scores_debug[crit].append(score)
         except Exception as e:
             score = 0  # Default if error occurs
-            t2nn_scores_debug[crit].append(None)  # Store None for errors
+            t2nn_scores_debug[crit].append(None) 
         col_scores.append(score)
     norm_scores[crit] = normalize_minmax(col_scores, benefit=is_benefit)
 
