@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 
 # T2NN dönüşüm fonksiyonu
 def convert_to_t2nn(value, term_dict):
-    # Verilen dilsel terime karşılık gelen T2NN değerini döndürür
     return term_dict.get(value, ((0, 0, 0), (0, 0, 0), (0, 0, 0)))
 
 # Normalizasyon fonksiyonu
@@ -23,7 +22,6 @@ def normalize_values(values, value_type='benefit'):
 
 # Ağırlıklı normalizasyon karar matrisi
 def weighted_normalized_matrix(normalized_matrix, weights):
-    # Normalize edilen matrisin boyutunu kontrol et
     weighted_matrix = np.array([list(normalized_matrix.values())]).T * np.array(weights)
     return weighted_matrix
 
@@ -74,8 +72,8 @@ if uploaded_file is not None:
     st.dataframe(data)
 
     # Alternatifler ve kriterler verilerini işleme
-    alternatives = data.iloc[:, 0]  # İlk sütun alternatifler
-    criteria = data.columns[1:]     # Kriterler
+    alternatives = data.iloc[:, 0].tolist()  # İlk sütun alternatifler
+    criteria = data.columns[1:].tolist()     # Kriterler
 
     # Kriter türleri (cost veya benefit) verisi alalım
     criteria_types = st.multiselect("Kriter türlerini seçin (Benefit veya Cost)", criteria)
@@ -108,7 +106,7 @@ if uploaded_file is not None:
 
     # Sonuçları görselleştirme
     st.write("Alternatiflerin Nihai Sıralamaları:")
-    sorted_scores = pd.DataFrame({"Alternatif": alternatives, "Skor": scores})
+    sorted_scores = pd.DataFrame({"Alternatif": alternatives, "Skor": scores})  # Alternatif ve Skorları tek boyutlu olarak birleştir
     sorted_scores = sorted_scores.sort_values(by="Skor", ascending=False)
     st.dataframe(sorted_scores)
 
@@ -122,8 +120,8 @@ else:
     st.write("Excel dosyasını yüklemediniz. Lütfen verileri manuel olarak girin.")
 
     # Manuel veri girişi
-    num_alternatives = st.number_input("Alternatif sayısını girin", min_value=1,)
-    num_criteria = st.number_input("Kriter sayısını girin", min_value=1,)
+    num_alternatives = st.number_input("Alternatif sayısını girin", min_value=1, value=3)
+    num_criteria = st.number_input("Kriter sayısını girin", min_value=1, value=3)
 
     alternatives = []
     for i in range(num_alternatives):
@@ -170,7 +168,7 @@ else:
 
     # Sonuçları görselleştirme
     st.write("Alternatiflerin Nihai Sıralamaları:")
-    sorted_scores = pd.DataFrame({"Alternatif": alternatives, "Skor": scores})
+    sorted_scores = pd.DataFrame({"Alternatif": alternatives, "Skor": scores})  # Alternatif ve Skorları tek boyutlu olarak birleştir
     sorted_scores = sorted_scores.sort_values(by="Skor", ascending=False)
     st.dataframe(sorted_scores)
 
