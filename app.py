@@ -101,9 +101,9 @@ for crit in criteria:
                 else:
                     a = b = float(val)
                 t2nn = convert_range_to_t2n(a, b)
-                score = t2nn.score()  # 💡 buradaki score = t2nn_score değil!
+                score = t2nn.score() 
             else:
-                score = float(val)  # qualitative için doğrudan al
+                score = float(val)
         except Exception as e:
             score = 0  # veya None
         col_scores.append(score)
