@@ -53,8 +53,8 @@ if uploaded_file:
     alternatives = decision_matrix.index.tolist()
 
     # Kriter türleri
-    types = dict(zip(sub_criteria['Sub Criteria'], sub_criteria['sub-criteria attributes']))
-    evals = dict(zip(sub_criteria['Sub Criteria'], sub_criteria['evaluation perspective']))
+    types = dict(zip(sub_criteria['Criteria No'], sub_criteria['Sub-Criteria Attributes']))
+    evals = dict(zip(sub_criteria['Criteria No'], sub_criteria['Evaluation Perspective']))
     weights_dict = dict(zip(weights['Criteria'], weights['Weight']))
 
     # --- Normalize matris oluştur ---
