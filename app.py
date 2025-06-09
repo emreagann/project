@@ -76,7 +76,7 @@ if uploaded_file:
                 t2nn = convert_range_to_t2n(a, b)
                 score = t2nn.score()
             else:
-                score = float(val)
+                score = float(str(val).replace(\"–\", \"-\"))
             col_scores.append(score)
         norm_scores[crit] = normalize_minmax(col_scores, benefit=is_benefit)
 
