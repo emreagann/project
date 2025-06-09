@@ -10,19 +10,15 @@ class T2NN:
         self.F = F  # (F1, F2, F3)
 
     def score(self):
-        t_score = (self.T[0] + 4 * self.T[1] + self.T[2]) / 6
-        i_score = (self.I[0] + 4 * self.I[1] + self.I[2]) / 6
-        f_score = (self.F[0] + 4 * self.F[1] + self.F[2]) / 6
-        return t_score - i_score - f_score
+        # Makaledeki Definition 4'e göre score fonksiyonu
+        t_score = 8 + self.T[0] + 2 * self.T[1] + self.T[2]
+        i_score = self.I[0] + 2 * self.I[1] + self.I[2]
+        f_score = self.F[0] + 2 * self.F[1] + self.F[2]
+        return (t_score - i_score - f_score) / 12
 
 # --- Yardımcı fonksiyonlar ---
-def convert_to_t2n(val):
-    val = str(val).replace('–', '-')
-    if '-' in val:
-        a, b = map(float, val.split('-'))
-        m = (a + b) / 2
-    else:
-        a = b = m = float(val)
+def convert_range_to_t2n(a, b):
+    m = (a + b) / 2
     T = (a/10, m/10, b/10)
     I = (0.0125, 0.0125, 0.0125)
     F = (1 - b/10, 1 - m/10, 1 - a/10)
@@ -74,7 +70,12 @@ if uploaded_file:
         for alt in alternatives:
             val = decision_matrix.loc[alt, crit]
             if is_quant:
-                t2nn = convert_to_t2n(val)
+                if isinstance(val, str) and '-' in val:
+                    val = str(val).replace('–', '-')
+                    a, b = map(float, val.split('-'))
+                else:
+                    a = b = float(str(val).replace('–', '-'))
+                t2nn = convert_range_to_t2n(a, b)
                 score = t2nn.score()
             else:
                 score = float(str(val).replace('–', '-'))
