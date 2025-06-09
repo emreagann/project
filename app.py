@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 
-# --- T2NN sınıfı ve skor fonksiyonu ---
 class T2NN:
     def __init__(self, T, I, F):
         self.T = T  # (T1, T2, T3)
@@ -15,7 +14,7 @@ class T2NN:
         f_score = (self.F[0] + 4 * self.F[1] + self.F[2]) / 6
         return t_score - i_score - f_score
 
-# --- Yardımcı fonksiyonlar ---
+
 def convert_range_to_t2n(a, b):
     m = (a + b) / 2
     T = (a/10, m/10, b/10)
@@ -30,14 +29,10 @@ def normalize_qualitative(values, benefit=True):
     else:
         return [(max_v - v)/(max_v - min_v) if max_v != min_v else 0 for v in values]
 
-# --- Streamlit arayüzü ---
-st.title("Type-2 Neutrosophic MABAC Uygulaması")
+st.title("Type-2 Neutrosophic MABAC")
 
-uploaded_file = st.file_uploader("Excel dosyasını yükleyin", type=[".xlsx"])
+uploaded_file = st.file_uploader("Upload your excel file", type=[".xlsx"])
 
-if uploaded_file is None:
-    st.warning("Lütfen karar matrisi içeren Excel dosyasını yükleyin.")
-    st.stop()
 
 if uploaded_file:
     xls = pd.ExcelFile(uploaded_file)
@@ -45,22 +40,18 @@ if uploaded_file:
     weights = pd.read_excel(xls, sheet_name="Criteria Weights")
     sub_criteria = pd.read_excel(xls, sheet_name="Sub-Criteria")
 
-    # Sütun isimlerini normalize et
     sub_criteria.columns = sub_criteria.columns.str.strip().str.lower()
     weights.columns = weights.columns.str.strip().str.lower()
 
     criteria = decision_matrix.columns.tolist()
     alternatives = decision_matrix.index.tolist()
 
-    # Kriter türleri
     types = dict(zip(sub_criteria['criteria no'], sub_criteria['sub-criteria attributes']))
     evals = dict(zip(sub_criteria['criteria no'], sub_criteria['evaluation perspective']))
     weights_dict = dict(zip(weights['criteria no'], weights['weight']))
 
-    # --- Tüm kriterler için boş skor yapıları oluştur ---
     all_scores = {crit: [] for crit in criteria}
 
-    # --- Her kriter için skorları hesapla ---
     for crit in criteria:
         for alt in alternatives:
             val = decision_matrix.loc[alt, crit]
@@ -79,7 +70,6 @@ if uploaded_file:
             else:
                 all_scores[crit].append(float(val))
 
-    # --- Normalize işlemi ---
     norm_scores = []
     for i, alt in enumerate(alternatives):
         row = []
@@ -94,24 +84,23 @@ if uploaded_file:
     st.subheader("Normalize Edilmiş Karar Matrisi")
     st.dataframe(norm_df.style.format("{:.4f}"))
 
-    # --- Weighted normalize matris ---
     weighted_df = norm_df.copy()
     for crit in criteria:
         weighted_df[crit] = weighted_df[crit] * weights_dict[crit]
 
-    st.subheader("Weighted Normalize Matris (V)")
+    st.subheader("Weighted Normalized Matrix (V)")
     st.dataframe(weighted_df.style.format("{:.4f}"))
 
-    # --- Border (B) ---
+  
     B = weighted_df.mean(axis=0)
 
-    # --- Mesafe Matrisi Q = V - B ---
+
     Q = weighted_df - B
-    st.subheader("MABAC Mesafe Matrisi (Q = V - B)")
+    st.subheader("MABAC Distance Matrix (Q = V - B)")
     st.dataframe(Q.style.format("{:.4f}"))
 
     # --- MABAC Skorları ---
     scores = Q.sum(axis=1)
-    results = pd.DataFrame({"Skor": scores, "Sıralama": scores.rank(ascending=False).astype(int)}, index=alternatives)
-    st.subheader("MABAC Skorları ve Sıralama")
-    st.dataframe(results.sort_values("Sıralama"))
+    results = pd.DataFrame({"Scores": scores, "Ranking": scores.rank(ascending=False).astype(int)}, index=alternatives)
+    st.subheader("MABAC Results and Ranking")
+    st.dataframe(results.sort_values("Ranking"))
