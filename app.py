@@ -63,10 +63,9 @@ if uploaded_file:
     # Alternatif isimleri
     alternatives = data_df.iloc[:, 0].dropna().unique().tolist()
 
-    # Kriterler
-    criteria = data_df.iloc[1, 2:].tolist()
+   criteria = [col for col in data_df.columns if str(col).startswith("C")]
 
-    # Kullanıcıdan kriter türlerini al
+# Kullanıcıdan C1–C18 için benefit/cost seçimi
     st.subheader("Kriter türlerini belirtin (Benefit/Cost)")
     criterion_types = {}
     for c in criteria:
