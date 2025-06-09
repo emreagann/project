@@ -29,14 +29,15 @@ def convert_range_to_t2n(value):
     else:
         try:
             val = float(value.replace(',', '.'))
-            # --- DÜZENLENEN KISIM ---
-            delta = 0.125  # örneğin ±0.125 belirsizlik
+            # Eğer tek sayı verilmişse etrafında belirsizlik tanımla:
+            delta = 0.125
             truth = (val - delta, val, val + delta)
             indeterminacy = (delta / 2, delta / 2, delta / 2)
             falsity = tuple(1 - t for t in truth)
             return T2NeutrosophicNumber(truth, indeterminacy, falsity)
         except:
             return None
+
 
 
 uploaded_file = st.file_uploader("Upload your Excel file", type=["xlsx"])
