@@ -65,9 +65,12 @@ if uploaded_file:
         for crit in criteria:
             val = decision_matrix.loc[alt, crit]
             if evals[crit] == "quantitative":
-                # Aralık mı?
-                if isinstance(val, str) and '-' in val:
-                    a, b = map(float, val.replace("–", "-").split('-'))
+                if isinstance(val, str):
+                    val = val.replace("–", "-")
+                    if '-' in val:
+                        a, b = map(float, val.split('-'))
+                    else:
+                        a = b = float(val)
                 else:
                     a = b = float(val)
                 t2nn = convert_range_to_t2n(a, b)
