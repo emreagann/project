@@ -22,7 +22,7 @@ def convert_range_to_t2n(a, b):
     gamma = [m, m, a]  # γα, γβ, γγ
     
     T = [alpha[0]/10, (alpha[0] + beta[0])/20, beta[0]/10]
-    I = [0.0125, 0.0125, 0.0125]  # Sabit
+    I = [0.0125, 0.0125, 0.0125]
     F = [1 - beta[0]/10, 1 - (alpha[0] + beta[0])/20, 1 - alpha[0]/10]
 
     return T2NN(T, I, F)
@@ -106,16 +106,16 @@ for crit in criteria:
                 t2nn = convert_range_to_t2n(a, b)
                 score = t2nn.score()
             else:
-                score = float(val)  # For qualitative criteria, use the direct value
+                score = float(val)  
         except Exception as e:
-            score = 0  # Default value if error occurs
-        t2nn_scores_debug[crit].append(score)  # Add to debug list
+            score = 0  
+        t2nn_scores_debug[crit].append(score) 
         col_scores.append(score)
     
     if is_quant:
         norm_scores[crit] = normalize_minmax(col_scores, benefit=is_benefit)
     else:
-        norm_scores[crit] = col_scores  # Don't normalize qualitative scores
+        norm_scores[crit] = col_scores 
 
 t2nn_df = pd.DataFrame(t2nn_scores_debug, index=alternatives)
 
