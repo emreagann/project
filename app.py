@@ -110,6 +110,8 @@ st.subheader("Weighted Normalized Matrix (V)")
 st.dataframe(weighted_df.style.format("{:.4f}"))
 
 B = weighted_df.apply(lambda col: col.prod()**(1/len(col)), axis=0)
+st.subheader("Border Approximation Area (B)")
+st.dataframe(B.style.format("{:.4f}"))
 Q = weighted_df - B
 st.subheader("MABAC Distance Matrix (Q = V - B)")
 st.dataframe(Q.style.format("{:.4f}"))
