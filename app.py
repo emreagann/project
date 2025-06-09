@@ -62,7 +62,8 @@ if uploaded_file:
     xls = pd.ExcelFile(uploaded_file)
     data_df = pd.read_excel(xls, sheet_name=0, header=None)
     weight_df = pd.read_excel(xls, sheet_name=1, header=None)
-
+    data = data.dropna(how="all", axis=1)  # Tüm sütunu boş olanları at
+    data = data.dropna(how="all", axis=0)  # Tüm satırı boş olanları at
     criteria = [c for c in data.columns if c.startswith("C")]
     alternatives = data_df.iloc[:, 0].dropna().unique().tolist()
 
