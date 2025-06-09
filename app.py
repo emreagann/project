@@ -70,7 +70,7 @@ if uploaded_file:
     st.subheader("Kriter türlerini belirtin (Benefit/Cost)")
     criterion_types = {}
     for c in criteria:
-        criterion_types[c] = st.selectbox(f"{c} türü:", ["benefit", "cost"], key=c)
+        criteria_types[crit] = st.selectbox(f"{crit} türü:", ["benefit", "cost"], key=f"type_{crit}")
 
     # Ortalama skor matrisini oluştur (alternatif başına)
     score_matrix = []
