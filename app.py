@@ -90,7 +90,7 @@ for crit in criteria:
         val = decision_matrix.loc[alt, crit]
         try:
             val = str(val).replace('–', '-').strip()
-            if is_quant:  # Quantitative criteria
+            if is_quant:
                 if '-' in val:
                     parts = val.split('-')
                     if len(parts) == 2 and all(p.strip() != '' for p in parts):
