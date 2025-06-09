@@ -107,7 +107,7 @@ for crit in criteria:
                 t2nn_scores_debug[crit].append(score)
         except Exception as e:
             score = 0
-            t2nn_scores_debug[crit].append(None)
+            t2nn_scores_debug[crit].append(score)
         col_scores.append(score)
     norm_scores[crit] = normalize_minmax(col_scores, benefit=is_benefit)
 quant_criteria = [c for c in criteria if evals[c] == "quantitative"]
