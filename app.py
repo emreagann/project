@@ -35,6 +35,10 @@ st.title("Type-2 Neutrosophic MABAC Uygulaması")
 
 uploaded_file = st.file_uploader("Excel dosyasını yükleyin", type=[".xlsx"])
 
+if uploaded_file is None:
+    st.warning("Lütfen karar matrisi içeren Excel dosyasını yükleyin.")
+    st.stop()
+
 if uploaded_file:
     xls = pd.ExcelFile(uploaded_file)
     decision_matrix = pd.read_excel(xls, sheet_name="Alternatives", index_col=0)
