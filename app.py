@@ -10,6 +10,7 @@ def convert_range_to_t2n(value):
     if pd.isna(value):
         return None
     value = str(value).strip()
+    
     if '-' in value or '–' in value:
         value = value.replace('–', '-')
         parts = value.split('-')
@@ -28,8 +29,8 @@ def convert_range_to_t2n(value):
     else:
         try:
             val = float(value.replace(',', '.'))
-            # Burada aralık yarat
-            delta = 0.125  # örnek belirsizlik aralığı
+            # --- DÜZENLENEN KISIM ---
+            delta = 0.125  # örneğin ±0.125 belirsizlik
             truth = (val - delta, val, val + delta)
             indeterminacy = (delta / 2, delta / 2, delta / 2)
             falsity = tuple(1 - t for t in truth)
