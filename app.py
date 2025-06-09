@@ -6,7 +6,6 @@ from t2 import T2NeutrosophicNumber, t2nn_score, normalize_t2nn
 
 st.title("MABAC for Ship Fuel Selection using T2 Neutrosophic Numbers")
 
-def convert_range_to_t2n(value):
 def convert_range_to_mean(value):
     if pd.isna(value):
         return np.nan
