@@ -99,7 +99,6 @@ if uploaded_file:
     st.subheader("MABAC Distance Matrix (Q = V - B)")
     st.dataframe(Q.style.format("{:.4f}"))
 
-    # --- MABAC Skorları ---
     scores = Q.sum(axis=1)
     results = pd.DataFrame({"Scores": scores, "Ranking": scores.rank(ascending=False).astype(int)}, index=alternatives)
     st.subheader("MABAC Results and Ranking")
