@@ -79,7 +79,6 @@ elif input_mode == "Manual Entry":
     decision_matrix = st.data_editor(matrix_data, num_rows="dynamic", key="manual_input_matrix")
     alternatives = decision_matrix.index.tolist()
 
-# --- Initialize T2NN Score Debug Dictionary ---
 t2nn_scores_debug = {crit: [] for crit in criteria}  # Ensure no empty lists
 
 norm_scores = {crit: [] for crit in criteria}
