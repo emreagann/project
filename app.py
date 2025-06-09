@@ -81,7 +81,7 @@ if uploaded_file:
         norm_scores.append(row)
 
     norm_df = pd.DataFrame(norm_scores, columns=criteria, index=alternatives)
-    st.subheader("Normalize Edilmiş Karar Matrisi")
+    st.subheader("Normalized Decision Matrix")
     st.dataframe(norm_df.style.format("{:.4f}"))
 
     weighted_df = norm_df.copy()
