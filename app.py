@@ -115,8 +115,14 @@ for crit in criteria:
 
 # Show T2NN scores for debug
 t2nn_df = pd.DataFrame(t2nn_scores_debug, columns=criteria, index=alternatives)
+def safe_formatter(x):
+    try:
+        return f"{x:.5f}"
+    except:
+        return ""
+
 st.subheader("T2NN Score Matrix (Before Normalization)")
-st.dataframe(t2nn_df.style.format("{:.5f}"))
+st.dataframe(t2nn_df.style.format(safe_formatter))
 
 # Normalized Matrix
 norm_df = pd.DataFrame(norm_scores, columns=criteria, index=alternatives)
