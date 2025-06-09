@@ -12,23 +12,3 @@ class T2NeutrosophicNumber:
         )
 
 
-
-def normalize_t2nn(value, min_val, max_val, ctype):
-    if isinstance(value, T2NeutrosophicNumber):
-        def norm(x, min_x, max_x, is_benefit):
-            if max_x - min_x == 0:
-                return 0.0
-            return (x - min_x) / (max_x - min_x) if is_benefit else (max_x - x) / (max_x - min_x)
-
-        t = [norm(value.truth[i], min_val.truth[i], max_val.truth[i], ctype == "benefit") for i in range(3)]
-        i = [norm(value.indeterminacy[i], min_val.indeterminacy[i], max_val.indeterminacy[i], ctype == "cost") for i in range(3)]
-        f = [norm(value.falsity[i], min_val.falsity[i], max_val.falsity[i], ctype == "cost") for i in range(3)]
-        return T2NeutrosophicNumber(tuple(t), tuple(i), tuple(f))
-    
-    elif isinstance(value, (int, float)):
-        if max_val - min_val == 0:
-            return 0.0
-        return (value - min_val) / (max_val - min_val) if ctype == "benefit" else (max_val - value) / (max_val - min_val)
-
-    return 0.0
-
