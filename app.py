@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-from t2nn import T2NeutrosophicNumber
+from t2 import T2NeutrosophicNumber
 
 # T2NN skor hesaplama fonksiyonu
 def t2nn_score(t2nn):
