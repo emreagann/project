@@ -20,9 +20,9 @@ def convert_range_to_t2n(a, b):
     else:
         m = (a + b) / 2
         T = (a/10, m/10, b/10)
-    I = (0.0, 0.0, 0.0)
-    F = (1 - b/10, 1 - ((a + b)/2)/10, 1 - a/10) if a != b else (1 - a/10, 1 - a/10, 1 - a/10)
-    return T2NN(T, I, F)
+        I = (0.0125, 0.0125, 0.0125)
+        F = (1 - b/10, 1 - ((a + b)/2)/10, 1 - a/10) if a != b else (1 - a/10, 1 - a/10, 1 - a/10)
+        return T2NN(T, I, F)
 
 def normalize_minmax(values, benefit=True):
     min_v, max_v = min(values), max(values)
