@@ -51,7 +51,7 @@ if uploaded_file:
 
     criteria = decision_matrix.columns.tolist()
     alternatives = decision_matrix.index.tolist()
-
+    sub_criteria.columns = sub_criteria.columns.str.strip()
     # Kriter türleri
     types = dict(zip(sub_criteria['Criteria No'], sub_criteria['Sub-Criteria Attributes']))
     evals = dict(zip(sub_criteria['Criteria No'], sub_criteria['Evaluation Perspective']))
