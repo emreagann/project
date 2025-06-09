@@ -26,7 +26,6 @@ def convert_range_to_t2n(a, b):
         F = (1 - b / 10, 1 - m / 10, 1 - a / 10)
     return T2NN(T, I, F)
 
-
 def normalize_minmax(values, benefit=True):
     min_v, max_v = min(values), max(values)
     if max_v == min_v:
@@ -36,6 +35,7 @@ def normalize_minmax(values, benefit=True):
     else:
         return [(max_v - v)/(max_v - min_v) for v in values]
 
+# App Start
 st.title("Type-2 Neutrosophic MABAC Application")
 input_mode = st.radio("Select input method:", ["Upload from Excel", "Manual Entry"])
 
@@ -80,7 +80,9 @@ elif input_mode == "Manual Entry":
     decision_matrix = st.data_editor(matrix_data, num_rows="dynamic", key="manual_input_matrix")
     alternatives = decision_matrix.index.tolist()
 
+# --- Normalize + T2NN Scores
 norm_scores = {crit: [] for crit in criteria}
+t2nn_scores_debug = {crit: [] for crit in criteria}  # NEW: For T2NN score debugging
 
 for crit in criteria:
     is_quant = evals[crit] == "quantitative"
@@ -101,18 +103,27 @@ for crit in criteria:
                     a = b = float(val)
                 t2nn = convert_range_to_t2n(a, b)
                 score = t2nn.score()
+                t2nn_scores_debug[crit].append(score)  # Store T2NN score
             else:
                 score = float(val)
+                t2nn_scores_debug[crit].append(None)
         except Exception as e:
-            score = 0 
+            score = 0
+            t2nn_scores_debug[crit].append(None)
         col_scores.append(score)
     norm_scores[crit] = normalize_minmax(col_scores, benefit=is_benefit)
 
+# Show T2NN scores for debug
+t2nn_df = pd.DataFrame(t2nn_scores_debug, columns=criteria, index=alternatives)
+st.subheader("T2NN Score Matrix (Before Normalization)")
+st.dataframe(t2nn_df.style.format("{:.5f}"))
 
+# Normalized Matrix
 norm_df = pd.DataFrame(norm_scores, columns=criteria, index=alternatives)
 st.subheader("Normalized Decision Matrix")
 st.dataframe(norm_df.style.format("{:.4f}"))
 
+# Weighted Matrix
 weighted_df = norm_df.copy()
 for crit in criteria:
     weighted_df[crit] = weighted_df[crit] * weights_dict[crit]
@@ -120,13 +131,17 @@ for crit in criteria:
 st.subheader("Weighted Normalized Matrix (V)")
 st.dataframe(weighted_df.style.format("{:.4f}"))
 
+# Border Approximation Area
 B = weighted_df.apply(lambda col: col.prod()**(1/len(col)), axis=0)
 st.subheader("Border Approximation Area (B)")
 st.dataframe(B.to_frame().style.format("{:.4f}"))
+
+# Q Matrix
 Q = weighted_df - B
 st.subheader("MABAC Distance Matrix (Q = V - B)")
 st.dataframe(Q.style.format("{:.4f}"))
 
+# Final MABAC Scores
 scores = Q.sum(axis=1)
 results = pd.DataFrame({"Scores": scores, "Ranking": scores.rank(ascending=False).astype(int)}, index=alternatives)
 st.subheader("MABAC Results and Ranking")
