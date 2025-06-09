@@ -21,13 +21,21 @@ def normalize_values(values, value_type='benefit'):
         return [(max_val - v) / (max_val - min_val) for v in values]
     return values
 
-# MABAC Skor Hesaplama Fonksiyonu
-def mabac_score(weighted_matrix):
-    # Border area hesaplama
-    border_area = np.max(weighted_matrix, axis=0) - np.min(weighted_matrix, axis=0)
-    # Nihai skor hesaplama
-    scores = np.sum(weighted_matrix * border_area, axis=1)
-    return scores
+# Ağırlıklı normalizasyon karar matrisi
+def weighted_normalized_matrix(normalized_matrix, weights):
+    return np.array([list(normalized_matrix.values())]).T * np.array(weights)
+
+# Border area hesaplama fonksiyonu
+def calculate_border_area(weighted_matrix):
+    return np.prod(weighted_matrix, axis=0) ** (1 / weighted_matrix.shape[0])
+
+# Mesafe matrisi hesaplama
+def calculate_distance_matrix(weighted_matrix, border_area):
+    return weighted_matrix - border_area
+
+# Sonuçları hesaplama
+def final_scores(distance_matrix):
+    return np.sum(distance_matrix, axis=1)
 
 # Streamlit arayüzü
 st.title("MABAC Yöntemi Uygulaması")
@@ -47,7 +55,7 @@ if uploaded_file is not None:
     alternatives = data.iloc[:, 0]  # İlk sütun alternatifler
     criteria = data.columns[1:]     # Kriterler
 
-    # Kriter türleri (cost veya benefit) verisi alalım (örneğin)
+    # Kriter türleri (cost veya benefit) verisi alalım
     criteria_types = st.multiselect("Kriter türlerini seçin (Benefit veya Cost)", criteria)
     
     # Kullanıcıdan kriter ağırlıklarını alma
@@ -66,9 +74,11 @@ if uploaded_file is not None:
         else:
             normalized_matrix[criterion] = normalize_values(values, value_type='cost')
     
-    # MABAC yöntemi ile nihai skorları hesaplama
-    weighted_matrix = np.array([list(normalized_matrix.values())]).T * np.array(weights)
-    scores = mabac_score(weighted_matrix)
+    # MABAC işlemleri
+    weighted_matrix = weighted_normalized_matrix(normalized_matrix, weights)
+    border_area = calculate_border_area(weighted_matrix)
+    distance_matrix = calculate_distance_matrix(weighted_matrix, border_area)
+    scores = final_scores(distance_matrix)
 
     # Sonuçları görselleştirme
     st.write("Alternatiflerin Nihai Sıralamaları:")
@@ -81,4 +91,3 @@ if uploaded_file is not None:
     fig, ax = plt.subplots()
     ax.bar(sorted_scores['Alternatif'], sorted_scores['Skor'])
     st.pyplot(fig)
-
