@@ -79,7 +79,9 @@ if uploaded_file is not None:
     alternatives = data.iloc[:, 0].tolist()
     criteria = data.columns[1:].tolist()
 
-    criteria_types = st.multiselect("Kriter türlerini seçin (Benefit veya Cost)", criteria)
+    # Otomatik kriter türleri belirleniyor (sabit: benefit/cost bilgisi excelde)
+    cost_criteria = ["C4", "C5", "C8", "C9"]
+    benefit_criteria = [c for c in criteria if c not in cost_criteria]
 
     st.subheader("Kriter Ağırlıklarını Girin")
     criteria_weights = {}
@@ -94,7 +96,7 @@ if uploaded_file is not None:
 
     normalized_matrix = {}
     for criterion, values in transformed_values.items():
-        kind = 'benefit' if criterion in criteria_types else 'cost'
+        kind = 'cost' if criterion in cost_criteria else 'benefit'
         normalized_matrix[criterion] = normalize_values([val[0][0] for val in values], value_type=kind)
 
     weight_vector = [t2nn_score(w) for w in criteria_weights.values()]
@@ -116,40 +118,3 @@ if uploaded_file is not None:
 
 else:
     st.write("Excel dosyasını yüklemediniz. Lütfen verileri manuel olarak girin.")
-
-    num_alternatives = st.number_input("Alternatif sayısını girin", min_value=1)
-    num_criteria = st.number_input("Kriter sayısını girin", min_value=1)
-
-    alternatives = [st.text_input(f"Alternatif {i+1} ismi", f"A{i+1}") for i in range(num_alternatives)]
-    criteria = [st.text_input(f"Kriter {i+1} ismi", f"C{i+1}") for i in range(num_criteria)]
-
-    decision_matrix = {}
-    for crit in criteria:
-        st.write(f"{crit} için alternatiflerin değerlerini girin")
-        values = [st.selectbox(f"{alt} - {crit}", list(linguistic_to_t2nn_alternatives.keys()), key=f"{alt}_{crit}") for alt in alternatives]
-        decision_matrix[crit] = values
-
-    weights = []
-    for crit in criteria:
-        w = st.selectbox(f"{crit} için ağırlık", list(linguistic_to_t2nn_criteria.keys()), key=f"weight_{crit}")
-        weights.append(convert_to_t2nn(w, linguistic_to_t2nn_criteria))
-
-    transformed_values = {c: [convert_to_t2nn(val, linguistic_to_t2nn_alternatives) for val in decision_matrix[c]] for c in criteria}
-    normalized_matrix = {c: normalize_values([val[0][0] for val in vals]) for c, vals in transformed_values.items()}
-
-    weight_vector = [t2nn_score(w) for w in weights]
-
-    weighted_matrix = weighted_normalized_matrix(normalized_matrix, weight_vector)
-    border_area = calculate_border_area(weighted_matrix)
-    distance_matrix = calculate_distance_matrix(weighted_matrix, border_area)
-    scores = final_scores(distance_matrix)
-
-    st.write("Alternatiflerin Nihai Sıralamaları:")
-    sorted_scores = pd.DataFrame({"Alternatif": alternatives, "Skor": scores})
-    sorted_scores = sorted_scores.sort_values(by="Skor", ascending=False)
-    st.dataframe(sorted_scores)
-
-    st.subheader("Alternatiflerin Skor Dağılımı")
-    fig, ax = plt.subplots()
-    ax.bar(sorted_scores['Alternatif'], sorted_scores['Skor'])
-    st.pyplot(fig)
