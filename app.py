@@ -1,165 +1,112 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-from t2 import T2NeutrosophicNumber, t2nn_score, normalize_t2nn
+from t2nn import T2NeutrosophicNumber
 
-st.title("MABAC for Ship Fuel Selection using T2 Neutrosophic Numbers")
+# T2NN skor hesaplama fonksiyonu
+def t2nn_score(t2nn):
+    T = np.mean(t2nn.truth)
+    I = np.mean(t2nn.indeterminacy)
+    F = np.mean(t2nn.falsity)
+    return (T + (1 - I) + (1 - F)) / 3
 
-def convert_range_to_mean(value):
-    if pd.isna(value):
-        return np.nan
+# Normalize fonksiyonu
+def norm(x, min_val, max_val, is_benefit=True):
+    if is_benefit:
+        return (x - min_val) / (max_val - min_val) if max_val != min_val else 0
+    else:
+        return (max_val - x) / (max_val - min_val) if max_val != min_val else 0
+
+# Aralıkları T2NN'e çevirme fonksiyonu
+def convert_range_to_t2nn(value):
     if isinstance(value, str) and ('-' in value or '–' in value):
         value = value.replace('–', '-')
-        parts = value.split('-')
         try:
-            nums = [float(p.replace(',', '.')) for p in parts]
-            return sum(nums) / len(nums)
+            a_str, b_str = value.split('-')
+            a = float(a_str.replace(',', '.'))
+            b = float(b_str.replace(',', '.'))
+            m = (a + b) / 2
+
+            a /= 10
+            m /= 10
+            b /= 10
+
+            T = (a, m, b)
+            I = (0.0125, 0.0125, 0.0125)
+            F = (1 - b, 1 - m, 1 - a)
+
+            return T2NeutrosophicNumber(T, I, F)
         except:
-            return np.nan
+            return None
     else:
         try:
-            return float(str(value).replace(',', '.').replace(' ', ''))
+            x = float(str(value).replace(',', '.'))
+            T = (x/10, x/10, x/10)
+            I = (0.0125, 0.0125, 0.0125)
+            F = (1 - x/10, 1 - x/10, 1 - x/10)
+            return T2NeutrosophicNumber(T, I, F)
         except:
-            return np.nan
+            return None
 
+# Excel'den verileri yükle
+def load_excel(file):
+    xls = pd.ExcelFile(file)
+    df_alternatives = pd.read_excel(xls, sheet_name="Alternatives")
+    df_weights = pd.read_excel(xls, sheet_name="Criteria Weights")
+    df_sub = pd.read_excel(xls, sheet_name="Sub-Criteria")
 
+    criteria = df_weights["criteria"].tolist()
+    weights = df_weights["weight"].tolist()
+    attributes = df_sub["sub-criteria attributes"].tolist()
+    perspectives = df_sub["evaluation perspective"].tolist()
 
-uploaded_file = st.file_uploader("Upload your Excel file", type=["xlsx"])
+    data_raw = df_alternatives[criteria].values.tolist()
+    alternatives = df_alternatives["alternative"].tolist()
 
-if uploaded_file:
-    try:
-        df_alt = pd.read_excel(uploaded_file, sheet_name="Alternatives", index_col=0, skiprows=1)
-        df_weights = pd.read_excel(uploaded_file, sheet_name="Criteria Weights")
-        df_sub = pd.read_excel(uploaded_file, sheet_name="Sub-Criteria")
-    except:
-        st.stop()
+    # Karar matrisi oluştur
+    X = np.empty((len(alternatives), len(criteria)), dtype=object)
 
-    criteria = df_alt.index.tolist()
-    alternatives = df_alt.columns.tolist()
-    data_raw = df_alt.values.T
-
-    df_weights.columns = df_weights.columns.str.strip().str.lower()
-    df_sub.columns = df_sub.columns.str.strip().str.lower()
-
-    required_weight_cols = {"criteria no", "weight"}
-    required_sub_cols = {"criteria no", "sub-criteria attributes", "evaluation perspective"}
-    if not required_weight_cols.issubset(df_weights.columns) or not required_sub_cols.issubset(df_sub.columns):
-        st.error("Criteria Weights sheet must include: 'criteria no', 'weight'; Sub-Criteria sheet must include: 'criteria no', 'sub-criteria attributes', 'evaluation perspective'")
-        st.stop()
-
-    df_weights["criteria no"] = df_weights["criteria no"].astype(str).str.strip().str.upper()
-    df_sub["criteria no"] = df_sub["criteria no"].astype(str).str.strip().str.upper()
-
-    weights, attributes, perspectives = [], [], []
-
-    for crit in criteria:
-        crit_code = crit.strip().upper()
-        weight_row = df_weights[df_weights["criteria no"] == crit_code]
-        sub_row = df_sub[df_sub["criteria no"] == crit_code]
-
-        if weight_row.empty or sub_row.empty:
-            st.error(f"{crit} için ağırlık veya perspective bilgisi eksik.")
-            st.stop()
-
-        weights.append(float(str(weight_row.iloc[0]["weight"]).replace(',', '.')))
-        attribute = sub_row.iloc[0]["sub-criteria attributes"].strip().lower()
-        perspective = sub_row.iloc[0]["evaluation perspective"].strip().lower()
-
-        if perspective not in {"quantitative", "qualitative"}:
-            st.error(f"{crit} için geçersiz evaluation perspective: {perspective}")
-            st.stop()
-        if attribute not in {"benefit", "cost"}:
-            st.error(f"{crit} için geçersiz sub-criteria attribute: {attribute}")
-            st.stop()
-
-        attributes.append(attribute)
-        perspectives.append(perspective)
-
-    X = np.empty_like(data_raw, dtype=object)
     for j, crit in enumerate(criteria):
         for i in range(len(alternatives)):
             val = data_raw[i][j]
             if perspectives[j] == "quantitative":
-                if isinstance(val, str) and ('-' in val or '–' in val):
-                    mean = convert_range_to_mean(val)
-                    truth = (mean, mean, mean)
-                    indeterminacy = (0.0, 0.0, 0.0)
-                    falsity = (1 - mean, 1 - mean, 1 - mean)
-                    X[i, j] = T2NeutrosophicNumber(truth, indeterminacy, falsity)
-                else:
+                X[i, j] = convert_range_to_t2nn(val)
+            else:
+                try:
                     X[i, j] = float(str(val).replace(',', '.'))
+                except:
+                    X[i, j] = np.nan
 
-    X_norm_obj = np.empty_like(X, dtype=object)
+    # Normalizasyon
+    X_norm = np.empty_like(X, dtype=object)
+
     for j in range(len(criteria)):
-        col = [x[j] for x in X]
-
+        ctype = attributes[j]
         if perspectives[j] == "quantitative":
-            col_valid = [v for v in col if isinstance(v, T2NeutrosophicNumber)]
-            if not col_valid:
-                st.error(f"{criteria[j]} sütununda geçerli T2NN değeri yok. Verileri kontrol et.")
-                st.stop()
-
+            col = [X[i, j] for i in range(len(alternatives))]
             min_val = T2NeutrosophicNumber(
-                truth=tuple(min(v.truth[i] for v in col_valid) for i in range(3)),
-                indeterminacy=tuple(min(v.indeterminacy[i] for v in col_valid) for i in range(3)),
-                falsity=tuple(min(v.falsity[i] for v in col_valid) for i in range(3)),
+                tuple(min(v.truth[i] for v in col) for i in range(3)),
+                tuple(max(v.indeterminacy[i] for v in col) for i in range(3)),  # max I
+                tuple(max(v.falsity[i] for v in col) for i in range(3))         # max F
             )
             max_val = T2NeutrosophicNumber(
-                truth=tuple(max(v.truth[i] for v in col_valid) for i in range(3)),
-                indeterminacy=tuple(max(v.indeterminacy[i] for v in col_valid) for i in range(3)),
-                falsity=tuple(max(v.falsity[i] for v in col_valid) for i in range(3)),
+                tuple(max(v.truth[i] for v in col) for i in range(3)),
+                tuple(min(v.indeterminacy[i] for v in col) for i in range(3)),  # min I
+                tuple(min(v.falsity[i] for v in col) for i in range(3))         # min F
             )
             for i in range(len(alternatives)):
-                X_norm_obj[i, j] = normalize_t2nn(X[i, j], min_val, max_val, attributes[j])
+                value = X[i, j]
+                t = [norm(value.truth[i], min_val.truth[i], max_val.truth[i], ctype == "benefit") for i in range(3)]
+                i_ = [norm(value.indeterminacy[i], min_val.indeterminacy[i], max_val.indeterminacy[i], ctype == "cost") for i in range(3)]
+                f = [norm(value.falsity[i], min_val.falsity[i], max_val.falsity[i], ctype == "cost") for i in range(3)]
+                X_norm[i, j] = T2NeutrosophicNumber(t, i_, f)
         else:
-            col_valid = [v for v in col if isinstance(v, (int, float))]
-            min_val = min(col_valid)
-            max_val = max(col_valid)
+            col = [X[i, j] for i in range(len(alternatives))]
+            min_val = min(col)
+            max_val = max(col)
             for i in range(len(alternatives)):
-                val = X[i, j]
-                if max_val - min_val == 0:
-                    X_norm_obj[i, j] = 0.0
-                else:
-                    X_norm_obj[i, j] = (val - min_val) / (max_val - min_val) if attributes[j] == "benefit" else (max_val - val) / (max_val - min_val)
+                value = X[i, j]
+                norm_val = norm(value, min_val, max_val, ctype == "benefit")
+                X_norm[i, j] = norm_val
 
-    X_norm = np.array([[t2nn_score(cell) for cell in row] for row in X_norm_obj])
-
-    V_numeric = X_norm * np.array(weights)
-    G_vector = np.prod(V_numeric, axis=0) ** (1 / V_numeric.shape[0])
-    Distance_matrix = V_numeric - G_vector
-    Total_scores = Distance_matrix.sum(axis=1)
-
-    df_original = pd.DataFrame([[t2nn_score(cell) for cell in row] for row in X], index=alternatives, columns=criteria)
-    df_norm = pd.DataFrame(X_norm, index=alternatives, columns=criteria)
-    df_weighted = pd.DataFrame(V_numeric, index=alternatives, columns=criteria)
-    df_border = pd.DataFrame(G_vector.reshape(1, -1), columns=criteria)
-    df_distance = pd.DataFrame(Distance_matrix, index=alternatives, columns=criteria)
-    df_scores = pd.DataFrame({"TOTAL SCORE": Total_scores}, index=alternatives).sort_values(by="TOTAL SCORE", ascending=False)
-
-    st.subheader("Original Decision Matrix (Performance Values)")
-    st.dataframe(df_original.style.format("{:.3f}"))
-
-    st.subheader("Normalized Matrix")
-    st.dataframe(df_norm.style.format("{:.3f}"))
-
-    st.subheader("Weighted Normalized Matrix (V)")
-    st.dataframe(df_weighted.style.format("{:.3f}"))
-
-    st.subheader("Border Approximation Area (G)")
-    st.dataframe(df_border.style.format("{:.3f}"))
-
-    st.subheader("Distance Matrix (V - G)")
-    st.dataframe(df_distance.style.format("{:.3f}"))
-
-    st.subheader("MABAC Total Scores")
-    st.dataframe(df_scores.style.format("{:.4f}"))
-
-    fig, ax = plt.subplots()
-    ax.bar(df_scores.index, df_scores["TOTAL SCORE"], color="steelblue")
-    ax.set_ylabel("Score")
-    ax.set_title("Alternative Comparison")
-    st.pyplot(fig)
-
-    best = df_scores.iloc[0]
-    st.success(f"Best Alternative: **{best.name}** with Score: **{best['TOTAL SCORE']:.4f}**")
+    return alternatives, criteria, weights, X_norm
