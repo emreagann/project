@@ -85,18 +85,27 @@ for crit in criteria:
     col_scores = []
     for alt in alternatives:
         val = decision_matrix.loc[alt, crit]
-        if is_quant:
-            if isinstance(val, str) and '-' in val:
-                val = str(val).replace('–', '-').strip()
-                a, b = map(float, val.split('-'))
+        try:
+            val = str(val).replace('–', '-').strip()
+            if is_quant:
+                if '-' in val:
+                    parts = val.split('-')
+                    if len(parts) == 2 and all(p.strip() != '' for p in parts):
+                        a, b = map(float, parts)
+                    else:
+                        raise ValueError(f"Invalid interval format: '{val}'")
+                else:
+                    a = b = float(val)
+                t2nn = convert_range_to_t2n(a, b)
+                score = t2nn.score()
             else:
-                a = b = float(str(val).replace('–', '-'))
-            t2nn = convert_range_to_t2n(a, b)
-            score = t2nn.score()
-        else:
-            score = float(str(val).replace('–', '-'))
+                score = float(val)
+        except Exception as e:
+            st.warning(f"Hata: '{val}' değeri işlenemedi ({crit}, {alt}) → {e}")
+            score = 0  # veya dilersen None
         col_scores.append(score)
     norm_scores[crit] = normalize_minmax(col_scores, benefit=is_benefit)
+
 
 norm_df = pd.DataFrame(norm_scores, columns=criteria, index=alternatives)
 st.subheader("Normalized Decision Matrix")
