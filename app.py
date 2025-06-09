@@ -129,7 +129,7 @@ for crit in criteria:
     weighted_df[crit] = weighted_df[crit] * weights_dict[crit]
 
 st.subheader("Weighted Normalized Matrix (V)")
-st.dataframe(weighted_df.style.format("{:.4f}"))
+st.dataframe(weighted_df.fillna(0).style.format("{:.4f}"))
 
 # Border Approximation Area
 B = weighted_df.apply(lambda col: col.prod()**(1/len(col)), axis=0)
