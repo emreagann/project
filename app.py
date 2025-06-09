@@ -104,8 +104,7 @@ for crit in criteria:
             else:
                 score = float(val)
         except Exception as e:
-            st.warning(f"Hata: '{val}' değeri işlenemedi ({crit}, {alt}) → {e}")
-            score = 0  # veya dilersen None
+            score = 0 
         col_scores.append(score)
     norm_scores[crit] = normalize_minmax(col_scores, benefit=is_benefit)
 
