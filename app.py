@@ -92,7 +92,7 @@ if uploaded_file:
     st.dataframe(weighted_df.style.format("{:.4f}"))
 
   
-    B = weighted_df.mean(axis=0)
+    B = weighted_df.apply(lambda col: col.prod()**(1/len(col)), axis=0)
 
 
     Q = weighted_df - B
