@@ -79,8 +79,8 @@ elif input_mode == "Manual Entry":
     decision_matrix = st.data_editor(matrix_data, num_rows="dynamic", key="manual_input_matrix")
     alternatives = decision_matrix.index.tolist()
 
-t2nn_scores_debug = {crit: [] for crit in criteria}  # Ensure no empty lists
-
+# --- Calculate Scores and Normalize ---
+t2nn_scores_debug = {crit: [] for crit in criteria}
 norm_scores = {crit: [] for crit in criteria}
 
 for crit in criteria:
@@ -106,19 +106,15 @@ for crit in criteria:
             else:
                 score = float(val)  # For qualitative criteria, use the direct value
         except Exception as e:
-            score = 0  # Default value if error occurs
-        t2nn_scores_debug[crit].append(score)  # Add to debug list
+            score = 0
+        t2nn_scores_debug[crit].append(score)
         col_scores.append(score)
     
+    # Apply normalization only for quantitative criteria
     if is_quant:
         norm_scores[crit] = normalize_minmax(col_scores, benefit=is_benefit)
     else:
-        norm_scores[crit] = col_scores  # Don't normalize qualitative scores
-
-# --- Check if all T2NN scores have values ---
-for crit in criteria:
-    if len(t2nn_scores_debug[crit]) != len(alternatives):
-        st.warning(f"{crit} için T2NN skor listesi eksik! {len(t2nn_scores_debug[crit])}/{len(alternatives)} değer var.")
+        norm_scores[crit] = col_scores  # Do not normalize qualitative scores
 
 # Display T2NN scores for both quantitative and qualitative criteria
 t2nn_df = pd.DataFrame(t2nn_scores_debug, index=alternatives)
