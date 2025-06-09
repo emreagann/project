@@ -88,28 +88,17 @@ for crit in criteria:
     col_scores = []
     for alt in alternatives:
         val = decision_matrix.loc[alt, crit]
-        try:
-            val = str(val).replace('–', '-').strip()
-            if is_quant:
-                if '-' in val:
-                    parts = val.split('-')
-                    if len(parts) == 2 and all(p.strip() != '' for p in parts):
-                        a, b = map(float, parts)
-                    else:
-                        raise ValueError(f"Invalid interval format: '{val}'")
-                else:
-                    a = b = float(val)
-                t2nn = convert_range_to_t2n(a, b)
-                score = t2nn.score()  # T2NN score for quantitative criteria
-                t2nn_scores_debug[crit].append(score)
-            else:  # Qualitative criteria
-                score = float(val)  # Direct value for qualitative
-                t2nn_scores_debug[crit].append(score)
-        except Exception as e:
-            score = 0  # Default if error occurs
-            t2nn_scores_debug[crit].append(None) 
-        col_scores.append(score)
-    norm_scores[crit] = normalize_minmax(col_scores, benefit=is_benefit)
+        if is_quant:
+            col_scores.append(t2nn_score)
+        else:
+         
+            col_scores.append(float(val))  
+    
+    if is_quant:
+        norm_scores[crit] = normalize_minmax(col_scores, benefit=is_benefit)
+    else:
+        norm_scores[crit] = col_scores 
+
 
 quant_criteria = [c for c in criteria if evals[c] == "quantitative"]
 t2nn_df = pd.DataFrame({c: t2nn_scores_debug[c] for c in criteria}, index=alternatives)
