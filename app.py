@@ -63,14 +63,14 @@ if uploaded_file:
     # Alternatif isimleri
     alternatives = data_df.iloc[:, 0].dropna().unique().tolist()
 
-   criteria = [col for col in data_df.columns if str(col).startswith("C")]
+    # Kriter isimlerini al (C1, C2, ...)
+    criteria = [col for col in data_df.columns if str(col).startswith("C")]
 
-# Kullanıcıdan C1–C18 için benefit/cost seçimi
+    # Kullanıcıdan kriter türlerini al
     st.subheader("Kriter türlerini belirtin (Benefit/Cost)")
     criterion_types = {}
     for c in criteria:
         criterion_types[c] = st.selectbox(f"{c} türü:", ["benefit", "cost"], key=f"type_{c}")
-
 
     # Ortalama skor matrisini oluştur (alternatif başına)
     score_matrix = []
@@ -80,7 +80,7 @@ if uploaded_file:
         scores = []
         for col in rows.columns:
             terms = rows[col].tolist()
-            t2nn_values = [linguistic_to_t2nn_alternatives[str(term)] for term in terms]
+            t2nn_values = [linguistic_to_t2nn_alternatives.get(str(term).strip(), ((0,0,0),(0,0,0),(0,0,0))) for term in terms]
             avg_T = np.mean([x[0] for x in t2nn_values], axis=0)
             avg_I = np.mean([x[1] for x in t2nn_values], axis=0)
             avg_F = np.mean([x[2] for x in t2nn_values], axis=0)
