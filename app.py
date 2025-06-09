@@ -4,13 +4,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # T2NN dönüşüm fonksiyonu
-def convert_to_t2nn(value_range):
-    a, b = value_range
-    m = (a + b) / 2
-    T = (a / 10, m / 10, b / 10)
-    I = (0.0125, 0.0125, 0.0125)
-    F = (1 - b / 10, 1 - m / 10, 1 - a / 10)
-    return T, I, F
+def convert_to_t2nn(value, term_dict):
+    return term_dict.get(value, ((0, 0, 0), (0, 0, 0), (0, 0, 0)))
 
 # Normalizasyon fonksiyonu
 def normalize_values(values, value_type='benefit'):
@@ -23,7 +18,8 @@ def normalize_values(values, value_type='benefit'):
 
 # Ağırlıklı normalizasyon karar matrisi
 def weighted_normalized_matrix(normalized_matrix, weights):
-    return np.array([list(normalized_matrix.values())]).T * np.array(weights)
+    weighted_matrix = np.array([list(normalized_matrix.values())]).T * np.array(weights)
+    return weighted_matrix
 
 # Border area hesaplama fonksiyonu
 def calculate_border_area(weighted_matrix):
@@ -39,6 +35,25 @@ def final_scores(distance_matrix):
 
 # Streamlit arayüzü
 st.title("MABAC Yöntemi Uygulaması")
+
+# T2NN dilsel terimlerini içeren sözlük
+linguistic_to_t2nn_criteria = {
+    "Low": ((0.20, 0.30, 0.20), (0.60, 0.70, 0.80), (0.45, 0.75, 0.75)),
+    "MediumLow": ((0.40, 0.30, 0.25), (0.45, 0.55, 0.40), (0.45, 0.60, 0.55)),
+    "Medium": ((0.50, 0.55, 0.55), (0.40, 0.45, 0.55), (0.35, 0.40, 0.35)),
+    "High": ((0.80, 0.75, 0.70), (0.20, 0.15, 0.30), (0.15, 0.10, 0.20)),
+    "VeryHigh": ((0.90, 0.85, 0.95), (0.10, 0.15, 0.10), (0.05, 0.05, 0.10))
+}
+
+linguistic_to_t2nn_alternatives = {
+    "VeryBad": ((0.20, 0.20, 0.10), (0.65, 0.80, 0.85), (0.45, 0.80, 0.70)),
+    "Bad": ((0.35, 0.35, 0.10), (0.50, 0.75, 0.80), (0.50, 0.75, 0.65)),
+    "MediumBad": ((0.50, 0.30, 0.50), (0.50, 0.35, 0.45), (0.45, 0.30, 0.60)),
+    "Medium": ((0.40, 0.45, 0.50), (0.40, 0.45, 0.50), (0.35, 0.40, 0.45)),
+    "MediumGood": ((0.60, 0.45, 0.50), (0.20, 0.15, 0.25), (0.10, 0.25, 0.15)),
+    "Good": ((0.70, 0.75, 0.80), (0.15, 0.20, 0.25), (0.10, 0.15, 0.20)),
+    "VeryGood": ((0.95, 0.90, 0.95), (0.10, 0.10, 0.05), (0.05, 0.05, 0.05))
+}
 
 # Veri dosyasını yükleme
 uploaded_file = st.file_uploader("Veri dosyasını yükleyin (Excel veya CSV)", type=["csv", "xlsx"])
@@ -58,24 +73,29 @@ if uploaded_file is not None:
     # Kriter türleri (cost veya benefit) verisi alalım
     criteria_types = st.multiselect("Kriter türlerini seçin (Benefit veya Cost)", criteria)
     
-    # Kullanıcıdan kriter ağırlıklarını alma
-    weights = st.slider("Kriter ağırlıklarını girin (toplam 1 olmalı)", 0.0, 1.0, (0.2, 0.2, 0.2, 0.2), step=0.05)
+    # Kullanıcıdan kriter ağırlıklarını manuel girme
+    st.subheader("Kriter Ağırlıklarını Girin")
+    criteria_weights = {}
+    for criterion in criteria:
+        weight = st.selectbox(f"{criterion} için ağırlık girin", ["Low", "MediumLow", "Medium", "High", "VeryHigh"])
+        criteria_weights[criterion] = convert_to_t2nn(weight, linguistic_to_t2nn_criteria)
 
     # T2NN dönüşüm ve normalizasyon işlemi
     transformed_values = {}
     for criterion in criteria:
-        criterion_values = data[criterion].tolist()
-        transformed_values[criterion] = convert_to_t2nn(criterion_values)
-    
+        linguistic_values = st.text_area(f"{criterion} için dilsel terimler girin (örn. 'Low', 'Medium', 'High')", value="Low, Medium, High")
+        linguistic_values = linguistic_values.split(",")  # Kullanıcıdan gelen değerleri virgülle ayırıyoruz
+        transformed_values[criterion] = [convert_to_t2nn(value.strip(), linguistic_to_t2nn_criteria) for value in linguistic_values]
+
     normalized_matrix = {}
     for criterion, values in transformed_values.items():
         if criterion in criteria_types:
-            normalized_matrix[criterion] = normalize_values(values, value_type='benefit')
+            normalized_matrix[criterion] = normalize_values([value[0][0] for value in values], value_type='benefit')  # Benefit türü
         else:
-            normalized_matrix[criterion] = normalize_values(values, value_type='cost')
+            normalized_matrix[criterion] = normalize_values([value[0][0] for value in values], value_type='cost')  # Cost türü
     
     # MABAC işlemleri
-    weighted_matrix = weighted_normalized_matrix(normalized_matrix, weights)
+    weighted_matrix = weighted_normalized_matrix(normalized_matrix, list(criteria_weights.values()))
     border_area = calculate_border_area(weighted_matrix)
     distance_matrix = calculate_distance_matrix(weighted_matrix, border_area)
     scores = final_scores(distance_matrix)
