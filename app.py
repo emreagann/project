@@ -23,6 +23,7 @@ def normalize_values(values, value_type='benefit'):
 
 # Ağırlıklı normalizasyon karar matrisi
 def weighted_normalized_matrix(normalized_matrix, weights):
+    # Normalize edilen matrisin boyutunu kontrol et
     weighted_matrix = np.array([list(normalized_matrix.values())]).T * np.array(weights)
     return weighted_matrix
 
