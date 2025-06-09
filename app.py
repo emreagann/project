@@ -23,7 +23,6 @@ linguistic_to_t2nn_weights = {
     "VH": ((0.90, 0.85, 0.95), (0.10, 0.15, 0.10), (0.05, 0.05, 0.10))
 }
 
-# Skor fonksiyonu
 def t2nn_score(t2nn):
     T, I, F = t2nn
     return (1 / 12) * (
@@ -32,7 +31,6 @@ def t2nn_score(t2nn):
         - F[0] - 2 * F[1] - F[2]
     )
 
-# Normalize et
 def normalize(values, type_):
     min_v, max_v = min(values), max(values)
     if max_v == min_v:
@@ -42,7 +40,6 @@ def normalize(values, type_):
     else:
         return [(max_v - v) / (max_v - min_v) for v in values]
 
-# Ağırlıklı matris
 def weighted_matrix(norm_matrix, weights):
     return np.array(norm_matrix) * np.array(weights)
 
@@ -62,43 +59,48 @@ if uploaded_file:
     xls = pd.ExcelFile(uploaded_file)
     data_df = pd.read_excel(xls, sheet_name=0, header=None)
     weight_df = pd.read_excel(xls, sheet_name=1, header=None)
-    criteria = [c for c in data_df.columns if isinstance(c, str) and c.startswith("C")]
+
+    data_df.dropna(how="all", axis=1, inplace=True)
+    data_df.dropna(how="all", axis=0, inplace=True)
+    weight_df.dropna(how="all", axis=1, inplace=True)
+    weight_df.dropna(how="all", axis=0, inplace=True)
+
+    criteria = [c for c in data_df.iloc[0, 2:].tolist() if isinstance(c, str) and c.startswith("C")]
     alternatives = data_df.iloc[:, 0].dropna().unique().tolist()
 
-    # Kullanıcıdan kriter türü seçimi
     st.subheader("Kriter Türlerini Seçin (Benefit veya Cost)")
     criteria_types = {}
     for crit in criteria:
         criteria_types[crit] = st.selectbox(f"{crit} türü:", ["benefit", "cost"], key=f"type_{crit}")
 
-    # Alternatifler için T2NN skoru hesapla (4 karar vericinin ortalaması)
     alt_scores = []
     for alt in alternatives:
-        alt_rows = data_df[data_df[0] == alt].iloc[:, 2:]
+        alt_rows = data_df[data_df[0] == alt].iloc[:, 2:2+len(criteria)]
         alt_scores.append([
             np.mean([
-                t2nn_score(linguistic_to_t2nn_alternatives[val])
-                for val in alt_rows[c] if val in linguistic_to_t2nn_alternatives
+                t2nn_score(linguistic_to_t2nn_alternatives.get(str(val).strip(), ((0,0,0),(0,0,0),(0,0,0))))
+                for val in alt_rows[c] if str(val).strip() in linguistic_to_t2nn_alternatives
             ]) for c in alt_rows.columns
         ])
 
-    # Kriter ağırlıkları için T2NN skoru (4 uzman ortalaması)
-    weight_matrix = weight_df.iloc[:, 1:]
+    weight_matrix = weight_df.iloc[:, 1:1+len(criteria)]
     weight_scores = [
         np.mean([
-            t2nn_score(linguistic_to_t2nn_weights[val])
-            for val in weight_matrix[c] if val in linguistic_to_t2nn_weights
+            t2nn_score(linguistic_to_t2nn_weights.get(str(val).strip(), ((0,0,0),(0,0,0),(0,0,0))))
+            for val in weight_matrix[c] if str(val).strip() in linguistic_to_t2nn_weights
         ]) for c in weight_matrix.columns
     ]
 
-    # Normalize et
     norm_matrix = []
     for j, crit in enumerate(criteria):
-        col = [row[j] for row in alt_scores]
+        col = [row[j] for row in alt_scores if not np.isnan(row[j])]
         norm_matrix.append(normalize(col, criteria_types[crit]))
-    norm_matrix = np.array(norm_matrix).T
+    
+    if len(norm_matrix) == 0:
+        st.error("Normalizasyon matrisi boş. Lütfen Excel dosyasındaki veri yapısını kontrol edin.")
+        st.stop()
 
-    # Ağırlıklı
+    norm_matrix = np.array(norm_matrix).T
     V = weighted_matrix(norm_matrix, weight_scores)
     B = border_area_calc(V)
     D = distance_matrix_calc(V, B)
