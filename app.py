@@ -112,6 +112,27 @@ if uploaded_file:
 
     # --- Ağırlık skorlarını hesapla ---
     weight_scores = pd.Series(index=wt_df.index, dtype=float)
+    # Genişletilmiş tablo: T, I, F + skor + normalize
+    detailed_weights = pd.DataFrame(columns=[
+    'T1', 'T2', 'T3', 'I1', 'I2', 'I3', 'F1', 'F2', 'F3', 'Score', 'Normalized'
+    ], index=wt_df.index)
+
+    for crit in wt_df.index:
+        weight_list = [get_weight_t2nn_from_linguistic(wt_df.loc[crit, dm]) for dm in wt_df.columns]
+        combined = combine_weights_t2nns(weight_list)
+    
+    # T, I, F ayrı ayrı al
+        (t1, t2, t3), (i1, i2, i3), (f1, f2, f3) = combined
+        score = score_from_merged_t2nn(combined)
+    
+        detailed_weights.loc[crit] = [t1, t2, t3, i1, i2, i3, f1, f2, f3, score, 0]  # normalize sonra
+
+    # Normalize işlemi
+    total_score = detailed_weights['Score'].sum()
+    detailed_weights['Normalized'] = detailed_weights['Score'] / total_score
+
+    st.subheader("Birleştirilmiş T2NN Ağırlıklar + Skor + Normalize")
+    st.dataframe(detailed_weights.style.format(precision=4))
 
     for crit in wt_df.index:
         weight_list = [get_weight_t2nn_from_linguistic(wt_df.loc[crit, dm]) for dm in wt_df.columns]
