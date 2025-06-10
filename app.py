@@ -62,7 +62,30 @@ def zero_out_I_and_F(t2nn):
     T, _, _ = t2nn
     zero = (0.0, 0.0, 0.0)
     return (T, zero, zero)
+def combine_multiple_decision_makers(alt_df, decision_makers, criteria, alternatives):
+    combined_results = {}
 
+    # Her alternatif ve kriter için karar vericilerin birleşimini hesapla
+    for alt in alternatives:
+        for crit in criteria:
+            t2nns = []
+            
+            # Tüm karar vericiler için T2NN'leri al
+            for dm in decision_makers:
+                try:
+                    val = alt_df.loc[(alt, dm), (crit, dm)]
+                except KeyError:
+                    val = None
+                t2nns.append(get_t2nn_from_linguistic(val))
+            
+            # Karar vericiler arasındaki birleşimi yap
+            merged_t2nn = merge_t2nn_vectors(t2nns)  # Bu fonksiyon ⊕ işlemini yapar
+
+            # Skoru hesapla
+            score = score_from_merged_t2nn(merged_t2nn)
+            combined_results[(alt, crit)] = round(score, 4)
+    
+    return combined_results
 
 # --- Streamlit Arayüzü ---
 st.title("T2NN MABAC Alternatif ve Ağırlık Skorlama")
