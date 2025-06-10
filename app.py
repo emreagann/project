@@ -58,9 +58,11 @@ def calculate_BAA(weighted_df):
     return weighted_df.prod(axis=0)**(1/weighted_df.shape[0])
 
 def calculate_distances(weighted_df, BAA):
-    # Her alternatif için Euclidean mesafesi
     diff = weighted_df - BAA
-    return np.sqrt(np.sum(diff**2, axis=1))
+    squared_sum = np.sum(diff.values ** 2, axis=1)  # .values ile numpy array'e çeviriyoruz
+    distances = np.sqrt(squared_sum)
+    return distances
+
 
 # Uygulama
 st.title('Dilsel Değer Dönüşümü ve Skor Hesaplama')
