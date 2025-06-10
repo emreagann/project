@@ -135,16 +135,28 @@ if input_type == "Excel":
         criteria = alt_df.columns.get_level_values(0).unique()
         decision_makers = alt_df.columns.get_level_values(1).unique()
 
+        # Kriterler için benefit/cost seçimi
+        criteria_types = {}
+        for crit in criteria:
+            criteria_types[crit] = st.radio(f"Select if {crit} is Benefit or Cost", ("Benefit", "Cost"))
+
+        # Decision Type
         decision_type = st.radio("Select Decision Type", ("Benefit", "Cost"))
         is_benefit = decision_type == "Benefit"
 
+        # Karar vericilerin birleşik sonuçlarını hesapla
         combined_results = combine_multiple_decision_makers(alt_df, decision_makers, criteria, alternatives, is_benefit)
+
+        # Sonuçları görüntüle
         alt_scores = pd.DataFrame.from_dict(combined_results, orient='index', columns=["Score"])
 
         st.subheader("Decision Matrix (Combined Scores)")
         st.dataframe(alt_scores)
 
+        # Ağırlıkların birleşik skorlarını hesapla
         combined_weights = combine_weights(wt_df, decision_makers, criteria)
+
+        # Ağırlık skorlarını görüntüle
         weight_scores = pd.DataFrame.from_dict(combined_weights, orient='index', columns=["Score"])
 
         st.subheader("Combined Weights (Scores)")
@@ -157,6 +169,11 @@ elif input_type == "Manual":
     alternatives = st.text_input("Enter Alternatives (comma separated)").split(",")
     criteria = st.text_input("Enter Criteria (comma separated)").split(",")
     decision_makers = st.text_input("Enter Decision Makers (comma separated)").split(",")
+
+    # Kriterler için benefit/cost seçimi
+    criteria_types = {}
+    for crit in criteria:
+        criteria_types[crit] = st.radio(f"Select if {crit} is Benefit or Cost", ("Benefit", "Cost"))
 
     # Alternatif ve kriterler için manuel değer girişi
     manual_data = {}
