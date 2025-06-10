@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 
+# Dilsel değer dönüşüm tablosu
 linguistic_vars = {
     "VB": [0.2, 0.2, 0.1, 0.65, 0.8, 0.85, 0.45, 0.8, 0.7],
     "B": [0.35, 0.35, 0.1, 0.5, 0.75, 0.8, 0.5, 0.75, 0.65],
@@ -21,6 +22,8 @@ def get_valid_numeric_values(value):
     return score_function(linguistic_vars[value]) if value in linguistic_vars else 0
 
 def normalize_data(series, criteria_type):
+    if series.max() == series.min():
+        return 0  # tüm değerler eşitse 0 döndür
     if criteria_type.lower() == 'benefit':
         return (series - series.min()) / (series.max() - series.min())
     elif criteria_type.lower() == 'cost':
@@ -33,27 +36,27 @@ def apply_weights(normalized_df, weights):
 def calculate_BAA(weighted_df):
     return weighted_df.prod(axis=0) ** (1 / len(weighted_df))
 
-def calculate_distances(weighted_df, BAA):
-    diff = weighted_df - BAA
-    return np.sqrt((diff ** 2).sum(axis=1))
+def calculate_difference_matrix(weighted_df, BAA):
+    return weighted_df - BAA
 
-# Başla
-st.title("T2NN MABAC Hesaplayıcı")
+def calculate_scores(diff_df):
+    return diff_df.sum(axis=1)
 
-uploaded_file = st.file_uploader("Excel dosyası yükleyin", type="xlsx")
+# Uygulama arayüzü
+st.title("T2NN + MABAC Karar Destek Sistemi")
+
+uploaded_file = st.file_uploader("Excel dosyasını yükleyin", type="xlsx")
 
 if uploaded_file:
     df = pd.read_excel(uploaded_file, sheet_name="Alternatives")
     weights_df = pd.read_excel(uploaded_file, sheet_name="Weights")
 
-    # Alternatifleri gruplara ayır (her 4 satır 1 alternatif)
     n_criteria = len(weights_df)
     n_dms = 4
     n_alternatives = len(df) // n_dms
+    criteria_names = weights_df["Criteria No"].tolist()
 
-    criteria_names = weights_df["Criteria No"].tolist()  # ['C1', ..., 'C18']
-
-    final_matrix = pd.DataFrame(columns=weights_df["Criteria No"].tolist())
+    final_matrix = pd.DataFrame(columns=criteria_names)
     alternatives = []
 
     for i in range(n_alternatives):
@@ -65,30 +68,33 @@ if uploaded_file:
         alternatives.append(alt_name.strip() if isinstance(alt_name, str) else f"A{i+1}")
 
     final_matrix.index = alternatives
-    final_matrix.columns = criteria_names
 
     # Normalizasyon
     normalized_df = pd.DataFrame(index=final_matrix.index)
     for i, col in enumerate(final_matrix.columns):
         normalized_df[col] = normalize_data(final_matrix[col], weights_df.iloc[i]["Type"])
 
-    # Ağırlıklar
+    # Ağırlıklandırma
     weights = weights_df["Weight"].values
     weighted_df = apply_weights(normalized_df, weights)
 
-    # BAA ve MABAC Skoru
+    # MABAC hesaplama
     BAA = calculate_BAA(weighted_df)
-    distances = calculate_distances(weighted_df, BAA)
+    difference_df = calculate_difference_matrix(weighted_df, BAA)
+    scores = calculate_scores(difference_df)
 
     result_df = pd.DataFrame({
-        "Alternative": alternatives,
-        "MABAC Score": distances,
-        "Rank": distances.rank(ascending=False).astype(int)
+        "Alternative": final_matrix.index,
+        "MABAC Score": scores,
+        "Rank": scores.rank(ascending=False).astype(int)
     }).sort_values(by="Rank")
 
     # Sonuçları göster
     st.subheader("Karar Matrisi (Ortalama Skorlar):")
     st.dataframe(final_matrix)
+
+    st.subheader("Normalleştirilmiş ve Ağırlıklı Matris:")
+    st.dataframe(weighted_df)
 
     st.subheader("MABAC Skorları ve Sıralama:")
     st.dataframe(result_df)
