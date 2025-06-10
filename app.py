@@ -111,33 +111,38 @@ if uploaded_file:
     st.dataframe(alt_scores)
 
     # --- Ağırlık skorlarını hesapla ---
-    weight_scores = pd.Series(index=wt_df.index, dtype=float)
-    # Genişletilmiş tablo: T, I, F + skor + normalize
-    detailed_weights = pd.DataFrame(columns=[
+  # --- Ağırlık skorlarını hesapla ---
+weight_scores = pd.Series(index=wt_df.index, dtype=float)
+
+# Genişletilmiş tablo: T, I, F + skor + normalize
+detailed_weights = pd.DataFrame(columns=[
     'T1', 'T2', 'T3', 'I1', 'I2', 'I3', 'F1', 'F2', 'F3', 'Score', 'Normalized'
-    ], index=wt_df.index)
+], index=wt_df.index)
 
-    for crit in wt_df.index:
-        weight_list = [get_weight_t2nn_from_linguistic(wt_df.loc[crit, dm]) for dm in wt_df.columns]
-        combined = combine_weights_t2nns(weight_list)
-    
-    # T, I, F ayrı ayrı al
-        (t1, t2, t3), (i1, i2, i3), (f1, f2, f3) = combined
-        score = score_from_merged_t2nn(combined)
-    
-        detailed_weights.loc[crit] = [t1, t2, t3, i1, i2, i3, f1, f2, f3, score, 0]  # normalize sonra
+for crit in wt_df.index:
+    weight_list = [get_weight_t2nn_from_linguistic(wt_df.loc[crit, dm]) for dm in wt_df.columns]
 
-    # Normalize işlemi
-    total_score = detailed_weights['Score'].sum()
-    detailed_weights['Normalized'] = detailed_weights['Score'] / total_score
+    # Eq. (14): T2NN'leri topla ve ortala
+    combined = combine_weights_t2nns(weight_list)
 
-    st.subheader("Birleştirilmiş T2NN Ağırlıklar + Skor + Normalize")
-    st.dataframe(detailed_weights.style.format(precision=4))
+    # Eq. (21): I ve F bileşenlerini sıfırla
+    adjusted = zero_out_I_and_F(combined)
 
-    for crit in wt_df.index:
-        weight_list = [get_weight_t2nn_from_linguistic(wt_df.loc[crit, dm]) for dm in wt_df.columns]
-        combined = combine_weights_t2nns(weight_list)
-        weight_scores[crit] = round(score_from_merged_t2nn(combined), 4)
+    # Eq. (20): Skor hesapla
+    score = score_from_merged_t2nn(adjusted)
 
-    st.subheader("Kriter Ağırlıkları (Skorlar)")
-    st.dataframe(weight_scores)
+    # Detaylı tabloya ekle
+    (t1, t2, t3), (i1, i2, i3), (f1, f2, f3) = combined
+    detailed_weights.loc[crit] = [t1, t2, t3, i1, i2, i3, f1, f2, f3, score, 0]
+    weight_scores[crit] = round(score, 4)
+
+# Normalize işlemi
+total_score = detailed_weights['Score'].sum()
+detailed_weights['Normalized'] = detailed_weights['Score'] / total_score
+
+# Görselleştirme
+st.subheader("Birleştirilmiş T2NN Ağırlıklar + Skor + Normalize")
+st.dataframe(detailed_weights.style.format(precision=4))
+
+st.subheader("Kriter Ağırlıkları (Skorlar)")
+st.dataframe(weight_scores)
