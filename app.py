@@ -27,10 +27,10 @@ def score_function(values):
 def get_valid_numeric_values(value):
     numeric_values = linguistic_vars.get(value)
     if numeric_values is not None:
-        return numeric_values
-    return [0] * 9  # Geçersiz bir değer geldiğinde sıfırlarla doldurulacak
+        return score_function(numeric_values)
+    return 0  # Geçersiz bir değer geldiğinde 0 döndürülür
 
-# MABAC: Normalize and compute BAA (Border Approximation Area)
+# Min-Max Normalizasyonu
 def normalize_data(df, criteria_type):
     if criteria_type == 'benefit':
         return (df - df.min()) / (df.max() - df.min())
@@ -38,13 +38,16 @@ def normalize_data(df, criteria_type):
         return (df.max() - df) / (df.max() - df.min())
     return df
 
-def calculate_BAA(normalized_df):
-    # Convert DataFrame to numeric if it's not
-    return normalized_df.apply(pd.to_numeric, errors='coerce').prod(axis=0)**(1/len(normalized_df))
+# Weights ile çarpma
+def apply_weights(normalized_df, weights):
+    return normalized_df * weights
 
+# BAA Hesaplama
+def calculate_BAA(normalized_df):
+    return normalized_df.prod(axis=0)**(1/len(normalized_df))
+
+# Mesafe Matrisini Hesaplama
 def calculate_distances(normalized_df, BAA):
-    # Ensure the input is a numeric array or DataFrame
-    normalized_df = normalized_df.apply(pd.to_numeric, errors='coerce')
     return np.linalg.norm(normalized_df - BAA, axis=1)
 
 # Uygulama
@@ -60,6 +63,7 @@ if uploaded_file is not None:
 
     # Weights sayfasından kriter türlerini al
     criteria_types = weights_df['Type'].tolist()  # 'Type' sütununda kriter türlerini al
+    weights = weights_df['Weight'].tolist()  # Ağırlıkları al
 
     # Her bir dilsel değeri sayısal değerlere dönüştür
     valid_numeric_values_df = alternatives_values.applymap(lambda x: get_valid_numeric_values(x))
@@ -72,18 +76,19 @@ if uploaded_file is not None:
         # İlgili kriter türünü al ve normalize et
         normalized_df.iloc[:, i] = normalize_data(valid_numeric_values_df.iloc[:, i], criteria_type)
 
+    # Weights ile çarpma
+    weighted_df = apply_weights(normalized_df, weights)
+
     # BAA hesapla
-    BAA = calculate_BAA(normalized_df)
+    BAA = calculate_BAA(weighted_df)
 
     # Mesafeleri hesapla
-    distances = calculate_distances(normalized_df, BAA)
+    distances = calculate_distances(weighted_df, BAA)
 
-    # Sonuçları dataframe'e ekle
+    # 4 karar verici için ortalama hesaplama
     df['MABAC Score'] = distances
-
-    # Alternatifleri MABAC skoruna göre sırala
     df['Rank'] = df['MABAC Score'].rank(ascending=False)  # Skorları büyükten küçüğe sırala
 
-    # Skorları ve sıralamayı göster
+    # Sonuçları dataframe'e ekle
     st.write("MABAC Skorları ve Sıralama")
     st.dataframe(df[['MABAC Score', 'Rank']])
