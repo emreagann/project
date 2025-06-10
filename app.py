@@ -27,6 +27,8 @@ def get_valid_numeric_values(value):
     numeric_values = linguistic_vars.get(value)
     if numeric_values is not None:
         return numeric_values
+    return [0] * 9  # Geçersiz bir değer geldiğinde sıfırlarla doldurulacak
+
 # Uygulama
 st.title('Dilsel Değer Dönüşümü ve Skor Hesaplama')
 
@@ -43,6 +45,10 @@ if uploaded_file is not None:
     # Skor hesaplama işlemi
     scores_df = valid_numeric_values_df.applymap(score_function)
 
-    # Sonuçları görüntüle
-    st.write("Hesaplanan Skorlar")
+    # Decision Makers sayısına göre ortalama hesaplama
+    dm_count = len(df)  # Karar verici sayısını alıyoruz
+    scores_df['Average'] = scores_df.mean(axis=1)
+
+    # Skorları görüntüle
+    st.write("Hesaplanan Skorlar (Ortalama alınmış)")
     st.dataframe(scores_df)
