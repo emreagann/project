@@ -21,7 +21,6 @@ weight_linguistic_vars = {
 }
 
 # --- Yardımcı Fonksiyonlar ---
-
 def score_function(values):
     a1, a2, a3, b1, b2, b3, g1, g2, g3 = values
     return (1 / 12) * (8 + (a1 + 2 * a2 + a3) - (b1 + 2 * b2 + b3) - (g1 + 2 * g2 + g3))
@@ -31,12 +30,13 @@ def score_from_merged_t2nn(t2nn):
     return (1 / 12) * (8 + (a1 + 2*a2 + a3) - (b1 + 2*b2 + b3) - (g1 + 2*g2 + g3))
 
 def get_t2nn_from_linguistic(value):
-    if value in alternative_linguistic_vars:
-        nums = alternative_linguistic_vars[value]
-        return tuple(tuple(nums[i:i+3]) for i in range(0, 9, 3))
-    return ((0,0,0), (0,0,0), (0,0,0))
+    if pd.isna(value):
+        return ((0, 0, 0), (0, 0, 0), (0, 0, 0))
+    return tuple(tuple(alternative_linguistic_vars.get(value.strip(), [0]*9)[i:i+3]) for i in range(0, 9, 3))
 
 def get_weight_t2nn_from_linguistic(value):
+    if pd.isna(value):
+        return ((0, 0, 0), (0, 0, 0), (0, 0, 0))
     return weight_linguistic_vars.get(value.strip(), ((0,0,0), (0,0,0), (0,0,0)))
 
 def merge_t2nn_vectors(t2nn_list):
@@ -56,7 +56,7 @@ def combine_weights_t2nns(weight_list):
     combined = weight_list[0]
     for w in weight_list[1:]:
         combined = t2nn_addition(combined, w)
-    return tuple(tuple(x / 4 for x in comp) for comp in combined)
+    return tuple(tuple(x / len(weight_list) for x in comp) for comp in combined)
 
 # --- Streamlit Arayüzü ---
 
@@ -68,32 +68,26 @@ if uploaded_file:
     # Dosyayı oku
     xls = pd.ExcelFile(uploaded_file)
 
-    # Alternatives: MultiIndex index + MultiIndex columns
-   # Alternatives sayfasını oku (header'ları al ama index'leme yapma)
+    # Alternatives sayfasını oku
     raw_df = pd.read_excel(xls, "Alternatives", header=[0, 1])
-
-# İlk iki sütunu ("Alternative", "DM") alıp eksik yerleri yukarıdan doldur
     raw_df[['Alternative', 'DM']] = raw_df.iloc[:, :2].fillna(method='ffill')
-
-# Veriyi ayır: Alternatif + DM kolonlarını index yap, geri kalanlar skorlar
     data = raw_df.drop(columns=['Alternative', 'DM'])
     data.index = pd.MultiIndex.from_frame(raw_df[['Alternative', 'DM']])
     data.columns.names = ['Criteria', 'DM']
-
-    # Sonuç olarak bu bizim asıl alternatif matrisimiz olacak
     alt_df = data
 
-    
-    # Weights: Kriter isimleri satır, DM'ler sütun
+    # Weights sayfasını oku
     wt_df = pd.read_excel(xls, "Weights", index_col=0)
+    wt_df = wt_df[wt_df.index.notna()]  # NaN index varsa çıkar
 
+    # --- GÖRSELLER ---
     st.subheader("Yüklenen Alternatif Verileri")
-    st.dataframe(alt_df.reset_index())  # index'i göstererek daha okunabilir hale getiriyoruz
+    st.dataframe(alt_df.reset_index())
 
     st.subheader("Yüklenen Ağırlık Verileri")
     st.dataframe(wt_df)
 
-    # Alternatif skor matrisini hesapla
+    # --- Alternatif skorlarını hesapla ---
     alternatives = alt_df.index.get_level_values(0).unique()
     criteria = alt_df.columns.get_level_values(0).unique()
     decision_makers = alt_df.columns.get_level_values(1).unique()
@@ -104,7 +98,10 @@ if uploaded_file:
         for crit in criteria:
             t2nns = []
             for dm in decision_makers:
-                val = alt_df.loc[(alt, dm), (crit, dm)]
+                try:
+                    val = alt_df.loc[(alt, dm), (crit, dm)]
+                except KeyError:
+                    val = None
                 t2nns.append(get_t2nn_from_linguistic(val))
             merged = merge_t2nn_vectors(t2nns)
             score = score_from_merged_t2nn(merged)
@@ -113,8 +110,9 @@ if uploaded_file:
     st.subheader("Ortalama Karar Matrisi (Skorlar)")
     st.dataframe(alt_scores)
 
-    # Ağırlık skorlarını hesapla
+    # --- Ağırlık skorlarını hesapla ---
     weight_scores = pd.Series(index=wt_df.index, dtype=float)
+
     for crit in wt_df.index:
         weight_list = [get_weight_t2nn_from_linguistic(wt_df.loc[crit, dm]) for dm in wt_df.columns]
         combined = combine_weights_t2nns(weight_list)
