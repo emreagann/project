@@ -5,17 +5,6 @@ import pandas as pd
 def calculate_score(alpha, beta, gamma):
     return (1/12) * (8 + (alpha + 2*beta + gamma) - (beta + 2*gamma + gamma))
 
-# Linguistik değerler (örnek olarak verildi, eksikler eklenebilir)
-linguistic_values = {
-    'Very Bad (VB)': [0.2, 0.2, 0.1, 0.65, 0.8, 0.85, 0.45, 0.8, 0.7],
-    'Bad (B)': [0.35, 0.35, 0.35, 0.75, 0.8, 0.9, 0.5, 0.75, 0.65],
-    'Medium Bad (MB)': [0.4, 0.45, 0.4, 0.75, 0.85, 0.95, 0.6, 0.8, 0.7],
-    'Medium (M)': [0.4, 0.45, 0.5, 0.8, 0.85, 0.9, 0.6, 0.8, 0.75],
-    'Medium Good (MG)': [0.6, 0.55, 0.5, 0.85, 0.9, 0.95, 0.75, 0.85, 0.8],
-    'Good (G)': [0.7, 0.7, 0.75, 0.9, 0.95, 1.0, 0.85, 0.9, 0.85],
-    'Very Good (VG)': [0.95, 0.95, 0.9, 1.0, 1.0, 1.0, 0.95, 0.95, 0.9]
-}
-
 # Streamlit arayüzü
 st.title("MABAC Karar Matrisi Hesaplama")
 
@@ -25,6 +14,12 @@ if uploaded_file is not None:
     # Excel dosyasını oku
     df = pd.read_excel(uploaded_file, sheet_name="Alternatives")
     weights_df = pd.read_excel(uploaded_file, sheet_name="Weights")
+    linguistic_df = pd.read_excel(uploaded_file, sheet_name="Linguistic Variables")
+
+    # Linguistik değişkenleri dinamik olarak alalım
+    linguistic_values = {}
+    for index, row in linguistic_df.iterrows():
+        linguistic_values[row['Linguistic Variables']] = row[['(αα,αβ,αγ)', '(βα,ββ,βγ)', '(γα,γβ,γγ)']].values.tolist()
 
     # Linguistik terimleri sayılara dönüştürme fonksiyonu
     def convert_linguistic_to_score(value, linguistic_values):
