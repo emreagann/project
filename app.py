@@ -69,13 +69,26 @@ if uploaded_file:
     xls = pd.ExcelFile(uploaded_file)
 
     # Alternatives: MultiIndex index + MultiIndex columns
-    alt_df = pd.read_excel(xls, "Alternatives", header=[0, 1], index_col=[0, 1])
+   # Alternatives sayfasını oku (header'ları al ama index'leme yapma)
+    raw_df = pd.read_excel(xls, "Alternatives", header=[0, 1])
+
+# İlk iki sütunu ("Alternative", "DM") alıp eksik yerleri yukarıdan doldur
+    raw_df[['Alternative', 'DM']] = raw_df.iloc[:, :2].fillna(method='ffill')
+
+# Veriyi ayır: Alternatif + DM kolonlarını index yap, geri kalanlar skorlar
+    data = raw_df.drop(columns=['Alternative', 'DM'])
+    data.index = pd.MultiIndex.from_frame(raw_df[['Alternative', 'DM']])
+    data.columns.names = ['Criteria', 'DM']
+
+    # Sonuç olarak bu bizim asıl alternatif matrisimiz olacak
+    alt_df = data
+
     
     # Weights: Kriter isimleri satır, DM'ler sütun
     wt_df = pd.read_excel(xls, "Weights", index_col=0)
 
     st.subheader("Yüklenen Alternatif Verileri")
-    st.dataframe(alt_df)
+    st.dataframe(alt_df.reset_index())  # index'i göstererek daha okunabilir hale getiriyoruz
 
     st.subheader("Yüklenen Ağırlık Verileri")
     st.dataframe(wt_df)
