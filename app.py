@@ -93,7 +93,8 @@ elif input_method == "Manual Entry":
 
 if 'df' in locals() and 'weights_df' in locals():
     n_criteria = len(weights_df)
-    n_alternatives = len(df) // n_dms
+    n_alternatives = df['Alternative'].nunique()
+    n_dms = len(df) // n_alternatives
     criteria_names = weights_df["Criteria No"].tolist()
 
     final_matrix = pd.DataFrame(columns=criteria_names)
