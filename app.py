@@ -50,7 +50,10 @@ if input_method == "Upload Excel File":
     if uploaded_file:
         df = pd.read_excel(uploaded_file, sheet_name="Alternatives")
         weights_df = pd.read_excel(uploaded_file, sheet_name="Weights")
-        n_dms = st.number_input("Number of Decision Makers", min_value=1, step=1, value=4)
+
+        # Decision maker count detection
+        dm_columns = [col for col in df.columns if isinstance(col, str) and col.strip().upper().startswith("DM")]
+        n_dms = len(dm_columns) if dm_columns else 1
 
 elif input_method == "Manual Entry":
     num_alternatives = st.number_input("Number of Alternatives", min_value=1, step=1)
