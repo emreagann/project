@@ -16,7 +16,6 @@ def score_function(values):
     a1, a2, a3, b1, b2, b3, g1, g2, g3 = values
     return (1 / 12) * (8 + (a1 + 2 * a2 + a3) - (b1 + 2 * b2 + b3) - (g1 + 2 * g2 + g3))
 
-
 def get_valid_numeric_values(value):
     value = str(value).strip()
     return score_function(linguistic_vars[value]) if value in linguistic_vars else 0
@@ -44,12 +43,36 @@ def calculate_scores(diff_df):
 
 st.title("T2NN MABAC CALCULATION")
 
-uploaded_file = st.file_uploader("Upload your excel file", type="xlsx")
+input_method = st.radio("Select input method:", ("Upload Excel File", "Manual Entry"))
 
-if uploaded_file:
-    df = pd.read_excel(uploaded_file, sheet_name="Alternatives")
-    weights_df = pd.read_excel(uploaded_file, sheet_name="Weights")
+if input_method == "Upload Excel File":
+    uploaded_file = st.file_uploader("Upload your excel file", type="xlsx")
+    if uploaded_file:
+        df = pd.read_excel(uploaded_file, sheet_name="Alternatives")
+        weights_df = pd.read_excel(uploaded_file, sheet_name="Weights")
 
+elif input_method == "Manual Entry":
+    num_alternatives = st.number_input("Number of Alternatives", min_value=1, step=1)
+    num_criteria = st.number_input("Number of Criteria", min_value=1, step=1)
+
+    criteria_names = [f"C{i+1}" for i in range(num_criteria)]
+    weights = [st.number_input(f"Weight for {c}", min_value=0.0, format="%0.3f") for c in criteria_names]
+    types = [st.selectbox(f"Type for {c}", ["benefit", "cost"]) for c in criteria_names]
+    weights_df = pd.DataFrame({"Criteria No": criteria_names, "Weight": weights, "Type": types})
+
+    data = []
+    for a in range(num_alternatives):
+        row = []
+        st.markdown(f"### Alternative A{a+1}")
+        for c in criteria_names:
+            row.append(st.selectbox(f"A{a+1} - {c}", list(linguistic_vars.keys()), key=f"A{a+1}_{c}"))
+        data.append(row)
+
+    # Repeat each alternative 4 times to simulate 4 DMs
+    df = pd.DataFrame(sum([[alt]*4 for alt in data], []), columns=criteria_names)
+    df.insert(0, "Alternative", sum([[f"A{i+1}"]*4 for i in range(num_alternatives)], []))
+
+if 'df' in locals() and 'weights_df' in locals():
     n_criteria = len(weights_df)
     n_dms = 4
     n_alternatives = len(df) // n_dms
@@ -100,3 +123,4 @@ if uploaded_file:
     st.subheader("MABAC SCORE AND RANKING")
     st.dataframe(result_df)
 
+    st.success("Calculation complete. All matrices displayed.")
