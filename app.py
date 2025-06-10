@@ -41,7 +41,7 @@ if uploaded_file:
 
     data_df = pd.read_excel(xls, sheet_name="Alternatives", header=None)
     weight_df = pd.read_excel(xls, sheet_name="Weights", header=None)
-    types_df = pd.read_excel(xls, sheet_name="Criteria Types")
+    types_df = pd.read_excel(xls, sheet_name="Types")
     ling_df = pd.read_excel(xls, sheet_name="Linguistic")
 
     # 1. Alternatifler
