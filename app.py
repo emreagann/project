@@ -88,11 +88,23 @@ if uploaded_file:
         "Rank": scores.rank(ascending=False).astype(int)
     }).sort_values(by="Rank")
 
-    st.subheader("Karar Matrisi (Ortalama Skorlar):")
+    # Gösterimler
+    st.subheader("1. Karar Matrisi (T2NN Ortalama Skorlar):")
     st.dataframe(final_matrix)
 
-    st.subheader("Normalleştirilmiş ve Ağırlıklı Matris:")
+    st.subheader("2. Normalize Matris:")
+    st.dataframe(normalized_df)
+
+    st.subheader("3. Ağırlıklı Normalize Matris:")
     st.dataframe(weighted_df)
 
-    st.subheader("MABAC Skorları ve Sıralama:")
+    st.subheader("4. Border Approximation Area (BAA):")
+    st.write(BAA)
+
+    st.subheader("5. Mesafe Matrisi (V - BAA):")
+    st.dataframe(difference_df)
+
+    st.subheader("6. MABAC Skorları ve Sıralama:")
     st.dataframe(result_df)
+
+    st.success("Hesaplamalar tamamlandı. Tüm matrisler gösterildi.")
