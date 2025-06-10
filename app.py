@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
 
 # Dilsel Değerler ve Katsayılar
 linguistic_vars = {
@@ -29,6 +30,20 @@ def get_valid_numeric_values(value):
         return numeric_values
     return [0] * 9  # Geçersiz bir değer geldiğinde sıfırlarla doldurulacak
 
+# MABAC: Normalize and compute BAA (Border Approximation Area)
+def normalize_data(df, criteria_type):
+    if criteria_type == 'benefit':
+        return (df - df.min()) / (df.max() - df.min())
+    elif criteria_type == 'cost':
+        return (df.max() - df) / (df.max() - df.min())
+    return df
+
+def calculate_BAA(normalized_df):
+    return normalized_df.prod(axis=0)**(1/len(normalized_df))
+
+def calculate_distances(normalized_df, BAA):
+    return np.linalg.norm(normalized_df - BAA, axis=1)
+
 # Uygulama
 st.title('Dilsel Değer Dönüşümü ve Skor Hesaplama')
 
@@ -37,18 +52,23 @@ uploaded_file = st.file_uploader("Excel Dosyasını Yükle", type="xlsx")
 if uploaded_file is not None:
     # Excel dosyasını oku
     df = pd.read_excel(uploaded_file, sheet_name='Alternatives')
-    alternatives_values = df.iloc[:, 2:]
+    alternatives_values = df.iloc[:, 2:]  # Dilsel değerler
 
     # Her bir dilsel değeri sayısal değerlere dönüştür
     valid_numeric_values_df = alternatives_values.applymap(lambda x: get_valid_numeric_values(x))
 
-    # Skor hesaplama işlemi
-    scores_df = valid_numeric_values_df.applymap(score_function)
+    # Normalize et ve MABAC için BAA hesapla
+    normalized_df = valid_numeric_values_df.applymap(lambda x: normalize_data(pd.Series(x), 'benefit'))
 
-    # Decision Makers sayısına göre ortalama hesaplama
-    dm_count = len(df)  # Karar verici sayısını alıyoruz
-    scores_df['Average'] = scores_df.mean(axis=1)
+    BAA = calculate_BAA(normalized_df)
 
-    # Skorları görüntüle
-    st.write("Hesaplanan Skorlar (Ortalama alınmış)")
-    st.dataframe(scores_df)
+    # Mesafeleri hesapla
+    distances = calculate_distances(normalized_df, BAA)
+
+    # Sonuçları dataframe'e ekle
+    df['MABAC Score'] = distances
+    df['Rank'] = df['MABAC Score'].rank()
+
+    # Skorları ve sıralamayı göster
+    st.write("MABAC Skorları ve Sıralama")
+    st.dataframe(df[['MABAC Score', 'Rank']])
