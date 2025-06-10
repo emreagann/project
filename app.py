@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 
-# Güncellenmiş linguistic_vars (Tablo A.2 - alternatif değerlendirme)
 linguistic_vars = {
     "VB": [0.20, 0.20, 0.10, 0.65, 0.80, 0.85, 0.45, 0.80, 0.70],
     "B":  [0.35, 0.35, 0.10, 0.50, 0.75, 0.80, 0.50, 0.75, 0.65],
@@ -43,9 +42,9 @@ def calculate_difference_matrix(weighted_df, BAA):
 def calculate_scores(diff_df):
     return diff_df.sum(axis=1)
 
-st.title("T2NN + MABAC Karar Destek Sistemi")
+st.title("T2NN MABAC CALCULATION")
 
-uploaded_file = st.file_uploader("Excel dosyasını yükleyin", type="xlsx")
+uploaded_file = st.file_uploader("Upload your excel file", type="xlsx")
 
 if uploaded_file:
     df = pd.read_excel(uploaded_file, sheet_name="Alternatives")
@@ -69,16 +68,13 @@ if uploaded_file:
 
     final_matrix.index = alternatives
 
-    # Normalizasyon
     normalized_df = pd.DataFrame(index=final_matrix.index)
     for i, col in enumerate(final_matrix.columns):
         normalized_df[col] = normalize_data(final_matrix[col], weights_df.iloc[i]["Type"])
 
-    # Ağırlıklandırma
     weights = weights_df["Weight"].values
     weighted_df = apply_weights(normalized_df, weights)
 
-    # MABAC hesaplama
     BAA = calculate_BAA(weighted_df)
     difference_df = calculate_difference_matrix(weighted_df, BAA)
     scores = calculate_scores(difference_df)
@@ -89,23 +85,18 @@ if uploaded_file:
         "Rank": scores.rank(ascending=False).astype(int)
     }).sort_values(by="Rank")
 
-    # Gösterimler
-    st.subheader("1. Karar Matrisi (T2NN Ortalama Skorlar):")
-    st.dataframe(final_matrix)
-
-    st.subheader("2. Normalize Matris:")
+    st.subheader("Normalized Matrix")
     st.dataframe(normalized_df)
 
-    st.subheader("3. Ağırlıklı Normalize Matris:")
+    st.subheader("Weighted Normalized Matrix")
     st.dataframe(weighted_df)
 
-    st.subheader("4. Border Approximation Area (BAA):")
+    st.subheader("Border Approximation Area")
     st.write(BAA)
 
-    st.subheader("5. Mesafe Matrisi (V - BAA):")
+    st.subheader("Distance Matrix")
     st.dataframe(difference_df)
 
-    st.subheader("6. MABAC Skorları ve Sıralama:")
+    st.subheader("MABAC SCORE AND RANKING")
     st.dataframe(result_df)
 
-    st.success("Hesaplamalar tamamlandı. Tüm matrisler gösterildi.")
