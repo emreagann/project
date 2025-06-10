@@ -63,9 +63,9 @@ if input_method == "Upload Excel File":
 
         # Melt to stack alternatives vertically
         long_df = pd.DataFrame()
-        for alt in df['Alternative'].unique():
-            temp = df[df['Alternative'] == alt].iloc[:n_dms].copy()
-            temp['Alternative'] = alt
+        for alt in df['Alternatives'].unique():
+            temp = df[df['Alternatives'] == alt].iloc[:n_dms].copy()
+            temp['Alternatives'] = alt
             long_df = pd.concat([long_df, temp], axis=0)
         df = long_df.reset_index(drop=True)
 
