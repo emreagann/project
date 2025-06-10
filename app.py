@@ -53,7 +53,7 @@ if uploaded_file:
 
     criteria_names = weights_df["Criteria No"].tolist()  # ['C1', ..., 'C18']
 
-    final_matrix = pd.DataFrame()
+    final_matrix = pd.DataFrame(columns=weights_df["Criteria No"].tolist())
     alternatives = []
 
     for i in range(n_alternatives):
