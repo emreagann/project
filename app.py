@@ -153,7 +153,7 @@ if uploaded_file:
     st.dataframe(weight_scores)
 
     normalized_alternatives = min_max_normalization(alt_scores)
-    normalized_weights = min_max_normalization(pd.DataFrame(combined_weights).T).iloc[0]
+    normalized_weights = min_max_normalization(pd.DataFrame(combined_weights, index=criteria).T)
 
     mabac_scores = calculate_mabac(normalized_alternatives, normalized_weights)
 
