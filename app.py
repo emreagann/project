@@ -17,14 +17,18 @@ if uploaded_file is not None:
     df = pd.read_excel(uploaded_file, sheet_name="Alternatives")
     weights_df = pd.read_excel(uploaded_file, sheet_name="Weights")
 
+    # Alternatifler ve Ağırlıklar sayfalarında doğru sütun adlarını kontrol et
+    st.write("Alternatives Sayfasındaki Sütunlar:", df.columns)
+    st.write("Weights Sayfasındaki Sütunlar:", weights_df.columns)
+    
     # Linguistic Variables sayfalarındaki her sayfadan verileri alalım
     linguistic_values_alternatives = {}
     for index, row in df.iterrows():
-        linguistic_values_alternatives[row['Alternatives']] = row[['αα', 'αβ', 'αY', 'βα', 'ββ', 'βY', 'γα', 'γβ', 'γγ']].values.tolist()
+        linguistic_values_alternatives[row['Alternatives']] = row[1:].values.tolist()
 
     linguistic_values_weights = {}
     for index, row in weights_df.iterrows():
-        linguistic_values_weights[row['Weights']] = row[['αα', 'αβ', 'αY', 'βα', 'ββ', 'βY', 'γα', 'γβ', 'γγ']].values.tolist()
+        linguistic_values_weights[row['Weights']] = row[1:].values.tolist()
 
     # Linguistik terimleri sayılara dönüştürme fonksiyonu
     def convert_linguistic_to_score(value, linguistic_values):
