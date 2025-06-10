@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 
+# Linguistic değerlerin T2NN vektörleri
 linguistic_vars = {
     "VB": [0.20, 0.20, 0.10, 0.65, 0.80, 0.85, 0.45, 0.80, 0.70],
     "B":  [0.35, 0.35, 0.10, 0.50, 0.75, 0.80, 0.50, 0.75, 0.65],
@@ -43,6 +44,7 @@ def calculate_scores(diff_df):
 
 st.title("T2NN MABAC CALCULATION")
 
+# Giriş yöntemi seçimi
 input_method = st.radio("Select input method:", ("Upload Excel File", "Manual Entry"))
 
 if input_method == "Upload Excel File":
@@ -51,23 +53,23 @@ if input_method == "Upload Excel File":
         df = pd.read_excel(uploaded_file, sheet_name="Alternatives")
         weights_df = pd.read_excel(uploaded_file, sheet_name="Weights")
 
-        # Detect number of DMs dynamically from column names (DM1, DM2, ...)
-        criteria_names = weights_df["Criteria No"].tolist()
-        n_dms = 0
-        while True:
-            col_check = f"DM{n_dms + 1}"
-            if col_check in df.columns:
-                n_dms += 1
-            else:
-                break
+        # Alternatif sayısını ve DM sayısını otomatik bul
+        if 'Alternatives' not in df.columns:
+            st.error("❌ 'Alternatives' column not found.")
+            st.stop()
 
-        # Melt to stack alternatives vertically
-        long_df = pd.DataFrame()
-        for alt in df['Alternatives'].unique():
-            temp = df[df['Alternatives'] == alt].iloc[:n_dms].copy()
-            temp['Alternatives'] = alt
-            long_df = pd.concat([long_df, temp], axis=0)
-        df = long_df.reset_index(drop=True)
+        alt_counts = df['Alternatives'].value_counts()
+        if alt_counts.empty:
+            st.error("❌ No alternatives detected.")
+            st.stop()
+
+        n_dms = alt_counts.iloc[0]
+        n_alternatives = len(alt_counts)
+
+        if not (alt_counts == n_dms).all():
+            st.warning("⚠️ Not all alternatives have equal number of decision makers.")
+
+        st.info(f"🔢 {n_alternatives} alternatives detected, with {n_dms} decision makers per alternative.")
 
 elif input_method == "Manual Entry":
     num_alternatives = st.number_input("Number of Alternatives", min_value=1, step=1)
@@ -90,48 +92,33 @@ elif input_method == "Manual Entry":
             data.append([f"A{a+1}"] + row)
 
     df = pd.DataFrame(data, columns=["Alternatives"] + criteria_names)
-    if 'df' in locals() and 'weights_df' in locals():
-        if 'Alternatives' not in df.columns:
-            st.error("❌ 'Alternative' column not found in the Excel file. Please ensure there is a column named 'Alternative'.")
-            st.stop()
 
-    # Alternatif sayısı: kaç farklı A1, A2, A3, ... var
-    alt_counts = df['Alternative'].value_counts()
-
-    if alt_counts.empty:
-        st.error("❌ No alternatives found in the 'Alternative' column.")
-        st.stop()
-
-    # DM sayısı: her alternatif için kaç tekrar var
-    n_dms = alt_counts.iloc[0]  # A1 kaç kez geçiyor
-    n_alternatives = len(alt_counts)
-
-    if not (alt_counts == n_dms).all():
-        st.warning("⚠️ Not all alternatives have the same number of decision makers (DMs). Check input structure.")
-
-    st.info(f"🔢 {n_alternatives} alternatives detected, with {n_dms} decision makers per alternative.")
-
+# Hesaplama (her iki input yöntemi sonrası çalışır)
+if 'df' in locals() and 'weights_df' in locals():
+    criteria_names = weights_df["Criteria No"].tolist()
 
     final_matrix = pd.DataFrame(columns=criteria_names)
     alternatives = []
 
-    for i in range(n_alternatives):
-        group = df.iloc[i * n_dms:(i + 1) * n_dms][criteria_names]
+    for alt in df['Alternatives'].unique():
+        group = df[df['Alternatives'] == alt][criteria_names]
         scored = group.applymap(get_valid_numeric_values)
         avg_scores = scored.mean(axis=0)
-        final_matrix.loc[i] = avg_scores
-        alt_name = df.iloc[i * n_dms, 0]
-        alternatives.append(alt_name.strip() if isinstance(alt_name, str) else f"A{i+1}")
+        final_matrix.loc[len(final_matrix)] = avg_scores
+        alternatives.append(alt)
 
     final_matrix.index = alternatives
 
+    # Normalization
     normalized_df = pd.DataFrame(index=final_matrix.index)
     for i, col in enumerate(final_matrix.columns):
         normalized_df[col] = normalize_data(final_matrix[col], weights_df.iloc[i]["Type"])
 
+    # Weighted normalization
     weights = weights_df["Weight"].values
     weighted_df = apply_weights(normalized_df, weights)
 
+    # MABAC calculations
     BAA = calculate_BAA(weighted_df)
     difference_df = calculate_difference_matrix(weighted_df, BAA)
     scores = calculate_scores(difference_df)
@@ -142,22 +129,23 @@ elif input_method == "Manual Entry":
         "Rank": scores.rank(ascending=False).astype(int)
     }).sort_values(by="Rank")
 
-    st.subheader("Decision Matrix (T2NN Score Averages)")
+    # Display all matrices
+    st.subheader("1. Decision Matrix (T2NN Score Averages)")
     st.dataframe(final_matrix)
 
-    st.subheader("Normalized Matrix")
+    st.subheader("2. Normalized Matrix")
     st.dataframe(normalized_df)
 
-    st.subheader("Weighted Normalized Matrix")
+    st.subheader("3. Weighted Normalized Matrix")
     st.dataframe(weighted_df)
 
-    st.subheader("Border Approximation Area")
+    st.subheader("4. Border Approximation Area (BAA)")
     st.write(BAA)
 
-    st.subheader("Distance Matrix")
+    st.subheader("5. Distance Matrix")
     st.dataframe(difference_df)
 
-    st.subheader("MABAC SCORE AND RANKING")
+    st.subheader("6. MABAC SCORE AND RANKING")
     st.dataframe(result_df)
 
-    st.success("Calculation complete. All matrices displayed.")
+    st.success("✅ Calculation complete. All matrices displayed.")
