@@ -27,8 +27,6 @@ def get_valid_numeric_values(value):
     numeric_values = linguistic_vars.get(value)
     if numeric_values is not None:
         return numeric_values
-    return [0] * 9  # Geçersiz bir değer geldiğinde sıfırlarla doldurulacak
-
 # Uygulama
 st.title('Dilsel Değer Dönüşümü ve Skor Hesaplama')
 
