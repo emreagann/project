@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 
-# Dilsel Değerler ve Katsayılar
 linguistic_vars = {
     "VB": [0.2, 0.2, 0.1, 0.65, 0.8, 0.85, 0.45, 0.8, 0.7],
     "B": [0.35, 0.35, 0.1, 0.5, 0.75, 0.8, 0.5, 0.75, 0.65],
@@ -13,7 +12,6 @@ linguistic_vars = {
     "VG": [0.95, 0.9, 0.95, 0.1, 0.1, 0.05, 0.05, 0.05, 0.05],
 }
 
-# Skor fonksiyonu
 def score_function(values):
     alpha_alpha, alpha_beta, alpha_gamma, beta_alpha, beta_beta, beta_gamma, gamma_alpha, gamma_beta, gamma_gamma = values
     score = (1 / 12) * (
@@ -23,18 +21,15 @@ def score_function(values):
     )
     return score
 
-# Sayısal değerlere dönüştürme
 def get_valid_numeric_values(value):
     numeric_values = linguistic_vars.get(value)
     if numeric_values is not None:
         return score_function(numeric_values)
     return 0  # Geçersiz bir değer geldiğinde 0 döndürülür
 
-# Min-Max Normalizasyonu
 def normalize_data(df, criteria_type):
     try:
-        # Veri türünün sayısal olup olmadığını kontrol et
-        df = pd.to_numeric(df, errors='coerce')  # Sayısal olmayan verileri NaN yapar
+        df = pd.to_numeric(df, errors='coerce')
     except Exception as e:
         st.error(f"Veri dönüştürme hatası: {e}")
         return df
@@ -45,21 +40,17 @@ def normalize_data(df, criteria_type):
         return (df.max() - df) / (df.max() - df.min())
     return df
 
-# Weights ile çarpma
 def apply_weights(normalized_df, weights):
     if len(weights) != normalized_df.shape[1]:
         st.error("Ağırlıklar ve kriter sayısı uyuşmuyor!")
         return normalized_df
     return normalized_df * weights
-
-# BAA Hesaplama
 def calculate_BAA(weighted_df):
     # Kriter bazında geometrik ortalama (her sütun için)
     BAA = weighted_df.prod(axis=0) ** (1 / len(weighted_df))
     return BAA 
 
 def calculate_distances(weighted_df, BAA):
-    # Her satırdan (alternatiften) BAA çıkartılır
     diff = weighted_df.subtract(BAA, axis=1)
     squared_sum = (diff ** 2).sum(axis=1)
     distances = np.sqrt(squared_sum)
@@ -67,36 +58,28 @@ def calculate_distances(weighted_df, BAA):
 
 
 
-# Uygulama
-st.title('Dilsel Değer Dönüşümü ve Skor Hesaplama')
+st.title('T2NN MABAC Calculation')
 
-uploaded_file = st.file_uploader("Excel Dosyasını Yükle", type="xlsx")
+uploaded_file = st.file_uploader("Upload Excel File", type="xlsx")
 
 if uploaded_file is not None:
-    # Excel dosyasını oku
     df = pd.read_excel(uploaded_file, sheet_name='Alternatives')
-    weights_df = pd.read_excel(uploaded_file, sheet_name='Weights')  # Weights sayfasını oku
-    alternatives_values = df.iloc[:, 2:]  # Dilsel değerler
+    weights_df = pd.read_excel(uploaded_file, sheet_name='Weights')
+    alternatives_values = df.iloc[:, 2:]  
 
-    # Weights sayfasından kriter türlerini al
-    criteria_types = weights_df['Type'].tolist()  # 'Type' sütununda kriter türlerini al
-    weights = weights_df['Weight'].tolist()  # Ağırlıkları al
 
-    # Normalized DataFrame'i oluştur
+    criteria_types = weights_df['Type'].tolist()  
+    weights = weights_df['Weight'].tolist()  
+
     normalized_df = pd.DataFrame(index=alternatives_values.index, columns=alternatives_values.columns)
 
-    # Kriter türlerine göre her bir kriteri normalize et
     for i, criteria_type in enumerate(criteria_types):
-        # İlgili kriter türünü al ve normalize et
         normalized_df.iloc[:, i] = normalize_data(alternatives_values.iloc[:, i], criteria_type)
 
-    # Weights ile çarpma
     weighted_df = apply_weights(normalized_df, weights)
 
-    # BAA hesapla
     BAA = calculate_BAA(weighted_df)
 
-# Mesafeleri hesapla
     distances = calculate_distances(weighted_df, BAA)
 
 
