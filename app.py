@@ -2,15 +2,15 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 
-# Dilsel değer dönüşüm tablosu
+# Güncellenmiş linguistic_vars (Tablo A.2 - alternatif değerlendirme)
 linguistic_vars = {
-    "VB": [0.2, 0.2, 0.1, 0.65, 0.8, 0.85, 0.45, 0.8, 0.7],
-    "B": [0.35, 0.35, 0.1, 0.5, 0.75, 0.8, 0.5, 0.75, 0.65],
-    "MB": [0.5, 0.3, 0.5, 0.5, 0.35, 0.45, 0.45, 0.3, 0.6],
-    "M": [0.4, 0.45, 0.5, 0.4, 0.45, 0.5, 0.35, 0.4, 0.45],
-    "MG": [0.6, 0.45, 0.5, 0.2, 0.15, 0.25, 0.1, 0.25, 0.15],
-    "G": [0.7, 0.75, 0.8, 0.15, 0.2, 0.25, 0.1, 0.15, 0.2],
-    "VG": [0.95, 0.9, 0.95, 0.1, 0.1, 0.05, 0.05, 0.05, 0.05],
+    "VB": [0.20, 0.20, 0.10, 0.65, 0.80, 0.85, 0.45, 0.80, 0.70],
+    "B":  [0.35, 0.35, 0.10, 0.50, 0.75, 0.80, 0.50, 0.75, 0.65],
+    "MB": [0.50, 0.30, 0.50, 0.50, 0.35, 0.45, 0.45, 0.30, 0.60],
+    "M":  [0.40, 0.45, 0.50, 0.40, 0.45, 0.50, 0.35, 0.40, 0.45],
+    "MG": [0.60, 0.45, 0.50, 0.20, 0.15, 0.25, 0.10, 0.25, 0.15],
+    "G":  [0.70, 0.75, 0.80, 0.15, 0.20, 0.25, 0.10, 0.15, 0.20],
+    "VG": [0.95, 0.90, 0.95, 0.10, 0.10, 0.05, 0.05, 0.05, 0.05],
 }
 
 def score_function(values):
@@ -23,7 +23,7 @@ def get_valid_numeric_values(value):
 
 def normalize_data(series, criteria_type):
     if series.max() == series.min():
-        return 0  # tüm değerler eşitse 0 döndür
+        return 0
     if criteria_type.lower() == 'benefit':
         return (series - series.min()) / (series.max() - series.min())
     elif criteria_type.lower() == 'cost':
@@ -42,7 +42,6 @@ def calculate_difference_matrix(weighted_df, BAA):
 def calculate_scores(diff_df):
     return diff_df.sum(axis=1)
 
-# Uygulama arayüzü
 st.title("T2NN + MABAC Karar Destek Sistemi")
 
 uploaded_file = st.file_uploader("Excel dosyasını yükleyin", type="xlsx")
@@ -89,7 +88,6 @@ if uploaded_file:
         "Rank": scores.rank(ascending=False).astype(int)
     }).sort_values(by="Rank")
 
-    # Sonuçları göster
     st.subheader("Karar Matrisi (Ortalama Skorlar):")
     st.dataframe(final_matrix)
 
