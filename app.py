@@ -49,6 +49,7 @@ if input_method == "Upload Excel File":
     uploaded_file = st.file_uploader("Upload your excel file", type="xlsx")
     if uploaded_file:
         df = pd.read_excel(uploaded_file, sheet_name="Alternatives")
+        df['Alternatives'] = df['Alternatives'].fillna(method='ffill')  # ✅ Fill missing alternative names
         weights_df = pd.read_excel(uploaded_file, sheet_name="Weights")
 
         # Normalize alternative column name
