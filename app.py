@@ -51,9 +51,23 @@ if input_method == "Upload Excel File":
         df = pd.read_excel(uploaded_file, sheet_name="Alternatives")
         weights_df = pd.read_excel(uploaded_file, sheet_name="Weights")
 
-        # Decision maker count detection
-        dm_columns = [col for col in df.columns if isinstance(col, str) and col.strip().upper().startswith("DM")]
-        n_dms = len(dm_columns) if dm_columns else 1
+        # Detect number of DMs dynamically from column names (DM1, DM2, ...)
+        criteria_names = weights_df["Criteria No"].tolist()
+        n_dms = 0
+        while True:
+            col_check = f"DM{n_dms + 1}"
+            if col_check in df.columns:
+                n_dms += 1
+            else:
+                break
+
+        # Melt to stack alternatives vertically
+        long_df = pd.DataFrame()
+        for alt in df['Alternative'].unique():
+            temp = df[df['Alternative'] == alt].iloc[:n_dms].copy()
+            temp['Alternative'] = alt
+            long_df = pd.concat([long_df, temp], axis=0)
+        df = long_df.reset_index(drop=True)
 
 elif input_method == "Manual Entry":
     num_alternatives = st.number_input("Number of Alternatives", min_value=1, step=1)
@@ -111,6 +125,9 @@ if 'df' in locals() and 'weights_df' in locals():
         "MABAC Score": scores,
         "Rank": scores.rank(ascending=False).astype(int)
     }).sort_values(by="Rank")
+
+    st.subheader("Decision Matrix (T2NN Score Averages)")
+    st.dataframe(final_matrix)
 
     st.subheader("Normalized Matrix")
     st.dataframe(normalized_df)
