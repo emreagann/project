@@ -65,12 +65,13 @@ def zero_out_I_and_F(t2nn):
     zero = (0.0, 0.0, 0.0)
     return (T, zero, zero)
 
-def combine_multiple_decision_makers(alt_df, decision_makers, criteria, alternatives, is_benefit=True):
+def combine_multiple_decision_makers(alt_df, decision_makers, criteria, alternatives, criteria_types):
     combined_results = {}
 
     for alt in alternatives:
         for crit in criteria:
             t2nns = []
+            is_benefit = criteria_types[crit] == "Benefit"  # Benefit veya Cost
             for dm in decision_makers:
                 try:
                     val = alt_df.loc[(alt, dm), (crit, dm)]
@@ -84,11 +85,12 @@ def combine_multiple_decision_makers(alt_df, decision_makers, criteria, alternat
     
     return combined_results
 
-def combine_weights(alt_df, decision_makers, criteria):
+def combine_weights(alt_df, decision_makers, criteria, criteria_types):
     combined_weights = {}
 
     for crit in criteria:
         weight_list = []
+        is_benefit = criteria_types[crit] == "Benefit"  # Benefit veya Cost
         
         for dm in decision_makers:
             try:
@@ -98,7 +100,7 @@ def combine_weights(alt_df, decision_makers, criteria):
             weight_list.append(get_weight_t2nn_from_linguistic(val))
         
         merged_weight = combine_weights_t2nns(weight_list)
-        score = score_from_merged_t2nn(merged_weight)
+        score = score_from_merged_t2nn(merged_weight, is_benefit)
         combined_weights[crit] = round(score, 4)
     
     return combined_weights
@@ -140,7 +142,7 @@ if input_type == "Excel":
             criteria_types[crit] = st.radio(f"Select if {crit} is Benefit or Cost", ("Benefit", "Cost"))
 
         # Karar vericilerin birleşik sonuçlarını hesapla
-        combined_results = combine_multiple_decision_makers(alt_df, decision_makers, criteria, alternatives, is_benefit=True)
+        combined_results = combine_multiple_decision_makers(alt_df, decision_makers, criteria, alternatives, criteria_types)
 
         # Sonuçları görüntüle
         alt_scores = pd.DataFrame.from_dict(combined_results, orient='index', columns=["Score"])
@@ -149,7 +151,7 @@ if input_type == "Excel":
         st.dataframe(alt_scores)
 
         # Ağırlıkların birleşik skorlarını hesapla
-        combined_weights = combine_weights(wt_df, decision_makers, criteria)
+        combined_weights = combine_weights(wt_df, decision_makers, criteria, criteria_types)
 
         # Ağırlık skorlarını görüntüle
         weight_scores = pd.DataFrame.from_dict(combined_weights, orient='index', columns=["Score"])
@@ -180,13 +182,13 @@ elif input_type == "Manual":
     manual_df = pd.DataFrame(manual_data)
     manual_df.index = pd.MultiIndex.from_tuples(manual_data.keys(), names=["Alternative", "Criteria", "DM"])
 
-    combined_results = combine_multiple_decision_makers(manual_df, decision_makers, criteria, alternatives, is_benefit=True)
+    combined_results = combine_multiple_decision_makers(manual_df, decision_makers, criteria, alternatives, criteria_types)
     alt_scores = pd.DataFrame.from_dict(combined_results, orient='index', columns=["Score"])
 
     st.subheader("Decision Matrix (Combined Scores)")
     st.dataframe(alt_scores)
 
-    combined_weights = combine_weights(manual_df, decision_makers, criteria)
+    combined_weights = combine_weights(manual_df, decision_makers, criteria, criteria_types)
     weight_scores = pd.DataFrame.from_dict(combined_weights, orient='index', columns=["Score"])
 
     st.subheader("Combined Weights (Scores)")
