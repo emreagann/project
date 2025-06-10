@@ -54,14 +54,17 @@ def apply_weights(normalized_df, weights):
 
 # BAA Hesaplama
 def calculate_BAA(weighted_df):
-    # Kriter bazında geometrik ortalama (sütun bazında)
-    return weighted_df.prod(axis=0)**(1/weighted_df.shape[0])
+    # Kriter bazında geometrik ortalama (her sütun için)
+    BAA = weighted_df.prod(axis=0) ** (1 / len(weighted_df))
+    return BAA 
 
 def calculate_distances(weighted_df, BAA):
-    diff = weighted_df - BAA
-    squared_sum = np.sum(diff.values ** 2, axis=1)  # .values ile numpy array'e çeviriyoruz
+    # Her satırdan (alternatiften) BAA çıkartılır
+    diff = weighted_df.subtract(BAA, axis=1)
+    squared_sum = (diff ** 2).sum(axis=1)
     distances = np.sqrt(squared_sum)
     return distances
+
 
 
 # Uygulama
@@ -93,8 +96,9 @@ if uploaded_file is not None:
     # BAA hesapla
     BAA = calculate_BAA(weighted_df)
 
-    # Mesafeleri hesapla
+# Mesafeleri hesapla
     distances = calculate_distances(weighted_df, BAA)
+
 
     # 4 karar verici için ortalama hesaplama
     df['MABAC Score'] = distances
