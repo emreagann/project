@@ -106,7 +106,6 @@ def combine_weights(alt_df, decision_makers, criteria):
 # --- Streamlit Arayüzü ---
 st.title("T2NN MABAC Alternatif ve Ağırlık Skorlama")
 
-# Kullanıcıya seçim yaptırmak için seçenek ekleyelim: Excel veya manuel giriş
 input_type = st.radio("Select Input Type", ("Excel", "Manual"))
 
 if input_type == "Excel":
@@ -140,12 +139,8 @@ if input_type == "Excel":
         for crit in criteria:
             criteria_types[crit] = st.radio(f"Select if {crit} is Benefit or Cost", ("Benefit", "Cost"))
 
-        # Decision Type
-        decision_type = st.radio("Select Decision Type", ("Benefit", "Cost"))
-        is_benefit = decision_type == "Benefit"
-
         # Karar vericilerin birleşik sonuçlarını hesapla
-        combined_results = combine_multiple_decision_makers(alt_df, decision_makers, criteria, alternatives, is_benefit)
+        combined_results = combine_multiple_decision_makers(alt_df, decision_makers, criteria, alternatives, is_benefit=True)
 
         # Sonuçları görüntüle
         alt_scores = pd.DataFrame.from_dict(combined_results, orient='index', columns=["Score"])
@@ -185,7 +180,7 @@ elif input_type == "Manual":
     manual_df = pd.DataFrame(manual_data)
     manual_df.index = pd.MultiIndex.from_tuples(manual_data.keys(), names=["Alternative", "Criteria", "DM"])
 
-    combined_results = combine_multiple_decision_makers(manual_df, decision_makers, criteria, alternatives, is_benefit)
+    combined_results = combine_multiple_decision_makers(manual_df, decision_makers, criteria, alternatives, is_benefit=True)
     alt_scores = pd.DataFrame.from_dict(combined_results, orient='index', columns=["Score"])
 
     st.subheader("Decision Matrix (Combined Scores)")
