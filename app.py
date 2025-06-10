@@ -49,7 +49,6 @@ if input_method == "Upload Excel File":
     uploaded_file = st.file_uploader("Upload your excel file", type="xlsx")
     if uploaded_file:
         df = pd.read_excel(uploaded_file, sheet_name="Alternatives")
-        df['Alternatives'] = df['Alternatives'].fillna(method='ffill')  # ✅ Fill missing alternative names
         weights_df = pd.read_excel(uploaded_file, sheet_name="Weights")
 
         # Normalize alternative column name
@@ -58,6 +57,9 @@ if input_method == "Upload Excel File":
         elif "Alternatives" not in df.columns:
             st.error("❌ Neither 'Alternative' nor 'Alternatives' column found.")
             st.stop()
+
+        # Fill empty alternatives with the last valid one
+        df["Alternatives"] = df["Alternatives"].fillna(method="ffill")
 
         criteria_names = weights_df["Criteria No"].tolist()
         n_dms = 0
