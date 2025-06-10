@@ -43,7 +43,11 @@ def weighted_matrix(norm_matrix, weights):
     return norm_matrix * weights
 
 def border_area_calc(V):
+    if V.shape[0] == 0:
+        st.warning("Geometrik ortalama (border area) için alternatif sayısı sıfır. Lütfen verileri kontrol edin.")
+        return np.zeros(V.shape[1])
     return np.prod(V, axis=0) ** (1 / V.shape[0])
+
 
 def distance_matrix_calc(V, B):
     return V - B
