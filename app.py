@@ -66,7 +66,7 @@ if uploaded_file:
     alternatives = []
     alt_indices = []
     for i, val in enumerate(data_df.iloc[:, 0]):
-        if isinstance(val, str) and val.strip().startswith("A"):
+        if isinstance(val, str) and val.strip().startswith("A") and val.strip().upper() != "ALTERNATIVES":
             alternatives.append(val.strip(":"))
             alt_indices.append(i)
 
