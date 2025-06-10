@@ -63,7 +63,6 @@ def zero_out_I_and_F(t2nn):
     zero = (0.0, 0.0, 0.0)
     return (T, zero, zero)
 
-
 # --- Streamlit Arayüzü ---
 st.title("T2NN MABAC Alternatif ve Ağırlık Skorlama")
 
@@ -92,40 +91,35 @@ if uploaded_file:
     st.subheader("Yüklenen Ağırlık Verileri")
     st.dataframe(wt_df)
 
-    # --- Alternatif skorlarını hesapla ---
+    # --- Alternatif skorlarını hesapla --- 
     alternatives = alt_df.index.get_level_values(0).unique()
     criteria = alt_df.columns.get_level_values(0).unique()
     decision_makers = alt_df.columns.get_level_values(1).unique()
 
-    # --- Alternatif skorlarını hesapla --- 
-alt_scores = pd.DataFrame(index=alternatives, columns=criteria)
+    alt_scores = pd.DataFrame(index=alternatives, columns=criteria)
 
-# İlk olarak, her kriter için DM'leri birleştirelim
-for alt in alternatives:
-    for crit in criteria:
-        t2nns = []
-        
-        # Her DM için T2NN değerlerini alıyoruz
-        for dm in decision_makers:
-            try:
-                val = alt_df.loc[(alt, dm), (crit, dm)]
-            except KeyError:
-                val = None
-            t2nns.append(get_t2nn_from_linguistic(val))
-        
-        # DM'lerin T2NN'lerini birleştir
-        merged_t2nn = merge_t2nn_vectors(t2nns)  # T2NN'leri ortalayarak birleştir
+    # Grup Kararını Oluştur: Her DM'nin verdiği T2NN'leri birleştir
+    for alt in alternatives:
+        for crit in criteria:
+            t2nns = []
+            for dm in decision_makers:
+                try:
+                    val = alt_df.loc[(alt, dm), (crit, dm)]
+                except KeyError:
+                    val = None
+                t2nns.append(get_t2nn_from_linguistic(val))
+            
+            # DM'lerin T2NN'lerini birleştir
+            merged_t2nn = merge_t2nn_vectors(t2nns)  # T2NN'leri ortalayarak birleştir
+            
+            # Birleştirilmiş T2NN üzerinden skoru hesapla
+            score = score_from_merged_t2nn(merged_t2nn)
+            alt_scores.loc[alt, crit] = round(score, 4)
 
-        # Birleştirilmiş T2NN üzerinden skoru hesapla
-        score = score_from_merged_t2nn(merged_t2nn)
-        alt_scores.loc[alt, crit] = round(score, 4)
+    st.subheader("Ortalama Karar Matrisi (Skorlar)")
+    st.dataframe(alt_scores)
 
-# Karar matrisini görüntüle
-st.subheader("Ortalama Karar Matrisi (Skorlar)")
-st.dataframe(alt_scores)
-
-
-    # --- Ağırlık skorlarını hesapla ---
+    # --- Ağırlık skorlarını hesapla --- 
     weight_scores = pd.Series(index=wt_df.index, dtype=float)
 
     # Genişletilmiş tablo: T, I, F + skor + normalize
