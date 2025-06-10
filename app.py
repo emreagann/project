@@ -10,15 +10,25 @@ linguistic_vars = {
     "MG": [0.60, 0.45, 0.50, 0.20, 0.15, 0.25, 0.10, 0.25, 0.15],
     "G":  [0.70, 0.75, 0.80, 0.15, 0.20, 0.25, 0.10, 0.15, 0.20],
     "VG": [0.95, 0.90, 0.95, 0.10, 0.10, 0.05, 0.05, 0.05, 0.05],
+    "L":  [0.20, 0.30, 0.20, 0.60, 0.70, 0.80, 0.45, 0.75, 0.75],
+    "ML": [0.40, 0.30, 0.25, 0.45, 0.55, 0.40, 0.45, 0.60, 0.55],
+    "H":  [0.80, 0.75, 0.70, 0.20, 0.15, 0.30, 0.15, 0.10, 0.20],
+    "VH": [0.90, 0.85, 0.95, 0.10, 0.15, 0.10, 0.05, 0.05, 0.10],
 }
 
 def score_function(values):
     a1, a2, a3, b1, b2, b3, g1, g2, g3 = values
     return (1 / 12) * (8 + (a1 + 2 * a2 + a3) - (b1 + 2 * b2 + b3) - (g1 + 2 * g2 + g3))
 
-def get_valid_numeric_values(value):
-    value = str(value).strip()
-    return score_function(linguistic_vars[value]) if value in linguistic_vars else 0
+def t2nn_addition(a, b):
+    return [a[i] + b[i] for i in range(len(a))]
+
+def t2nn_average(vectors):
+    n = len(vectors)
+    summed = vectors[0]
+    for vec in vectors[1:]:
+        summed = t2nn_addition(summed, vec)
+    return [x / n for x in summed]
 
 def normalize_data(series, criteria_type):
     if series.max() == series.min():
@@ -52,42 +62,78 @@ if input_method == "Upload Excel File":
         weights_df_raw = pd.read_excel(uploaded_file, sheet_name="Weights")
 
         if "Alternative" in df.columns:
-            df = df.rename(columns={"Alternative": "Alternatives"})
-        elif "Alternatives" not in df.columns:
-            st.error("❌ Neither 'Alternative' nor 'Alternatives' column found.")
-            st.stop()
+            df.rename(columns={"Alternative": "Alternatives"}, inplace=True)
 
-        criteria_names = weights_df_raw.columns[1:].tolist()  # Skip first column (DM)
-        n_dms_weights = weights_df_raw.shape[0]
+        criteria_names = weights_df_raw.columns[1:].tolist()
 
-        # T2NN values for weights
-        criteria_linguistic_weights = {
-            "L": [(0.20, 0.30, 0.20), (0.60, 0.70, 0.80), (0.45, 0.75, 0.75)],
-            "ML": [(0.40, 0.30, 0.25), (0.45, 0.55, 0.40), (0.45, 0.60, 0.55)],
-            "M": [(0.50, 0.55, 0.55), (0.40, 0.45, 0.55), (0.35, 0.40, 0.35)],
-            "H": [(0.80, 0.75, 0.70), (0.20, 0.15, 0.30), (0.15, 0.10, 0.20)],
-            "VH": [(0.90, 0.85, 0.95), (0.10, 0.15, 0.10), (0.05, 0.05, 0.10)]
-        }
-
-        # Combine all DMs' evaluations for each criterion
+        # Process criteria weights: average all DMs' T2NNs
         merged_weights = {}
         for crit in criteria_names:
-            t2nn_sum = None
-            for i in range(n_dms_weights):
-                term = weights_df_raw.loc[i, crit]
-                if isinstance(term, str) and term.strip() in criteria_linguistic_weights:
-                    t2nn = criteria_linguistic_weights[term.strip()]
-                    if t2nn_sum is None:
-                        t2nn_sum = t2nn
-                    else:
-                        t2nn_sum = [tuple(map(sum, zip(t2nn_sum[j], t2nn[j]))) for j in range(3)]
+            t2nn_list = []
+            for i in range(weights_df_raw.shape[0]):
+                val = weights_df_raw.loc[i, crit]
+                if isinstance(val, str) and val.strip() in linguistic_vars:
+                    t2nn_list.append(linguistic_vars[val.strip()])
+            if t2nn_list:
+                avg = t2nn_average(t2nn_list)
+                merged_weights[crit] = avg
 
-            avg_t2nn = [tuple(val / n_dms_weights for val in t) for t in t2nn_sum]
-            merged_weights[crit] = avg_t2nn
+        # Compute score weights
+        weight_scores = {crit: score_function(vec) for crit, vec in merged_weights.items()}
+        weights = pd.Series(weight_scores)
+        weights /= weights.sum()
 
-        def score_from_merged_t2nn(t2nn):
-            (a1, a2, a3), (b1, b2, b3), (g1, g2, g3) = t2nn
-            return (1 / 12) * (8 + (a1 + 2*a2 + a3) - (b1 + 2*b2 + b3) - (g1 + 2*g2 + g3))
+        weights_df = pd.DataFrame({
+            "Criteria No": list(weight_scores.keys()),
+            "Weight": list(weights.values),
+            "Type": ["benefit"] * len(weight_scores)  # or custom if available
+        })
 
-        final_weights = [score_from_merged_t2nn(merged_weights[crit]) for crit in criteria_names]
-        weights_df = pd.DataFrame({"Criteria No": criteria_names, "Weight": final_weights, "Type": ["benefit"] * len(criteria_names)})
+        # Decision matrix
+        alt_counts = df['Alternatives'].value_counts()
+        n_dms = alt_counts.iloc[0]
+        n_alternatives = len(alt_counts)
+        criteria_names = weights_df["Criteria No"].tolist()
+
+        final_matrix = pd.DataFrame(columns=criteria_names)
+
+        for alt in df['Alternatives'].unique():
+            group = df[df['Alternatives'] == alt][criteria_names]
+            scored = group.applymap(lambda x: score_function(linguistic_vars.get(str(x).strip(), [0]*9)))
+            avg_scores = scored.mean(axis=0)
+            final_matrix.loc[alt] = avg_scores
+
+        normalized_df = pd.DataFrame(index=final_matrix.index)
+        for i, col in enumerate(final_matrix.columns):
+            normalized_df[col] = normalize_data(final_matrix[col], weights_df.iloc[i]["Type"])
+
+        weighted_df = apply_weights(normalized_df, weights_df["Weight"].values)
+        BAA = calculate_BAA(weighted_df)
+        difference_df = calculate_difference_matrix(weighted_df, BAA)
+        scores = calculate_scores(difference_df)
+
+        result_df = pd.DataFrame({
+            "Alternative": final_matrix.index,
+            "MABAC Score": scores,
+            "Rank": scores.rank(ascending=False).astype(int)
+        }).sort_values(by="Rank")
+
+        st.subheader("Decision Matrix (T2NN Score Averages)")
+        st.dataframe(final_matrix)
+
+        st.subheader("Normalized Matrix")
+        st.dataframe(normalized_df)
+
+        st.subheader("Weighted Normalized Matrix")
+        st.dataframe(weighted_df)
+
+        st.subheader("Border Approximation Area")
+        st.write(BAA)
+
+        st.subheader("Distance Matrix")
+        st.dataframe(difference_df)
+
+        st.subheader("MABAC SCORE AND RANKING")
+        st.dataframe(result_df)
+
+        st.success("Calculation complete. All matrices displayed.")
