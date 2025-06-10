@@ -140,8 +140,8 @@ if uploaded_file:
     # --- Sonuç Göster ---
     result_df = pd.DataFrame({
         "Alternatif": alternatives,
-        "Skor": scores.round(4),
-        "Normalize Skor": theta_scores.round(4)
+        "Skor": scores,
+        "Normalize Skor": theta_scores
     }).sort_values(by="Skor", ascending=False)
 
     st.subheader("Sonuç: Alternatif Sıralaması")
