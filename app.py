@@ -39,9 +39,12 @@ def normalize_data(df, criteria_type):
     return df
 
 def calculate_BAA(normalized_df):
-    return normalized_df.prod(axis=0)**(1/len(normalized_df))
+    # Convert DataFrame to numeric if it's not
+    return normalized_df.apply(pd.to_numeric, errors='coerce').prod(axis=0)**(1/len(normalized_df))
 
 def calculate_distances(normalized_df, BAA):
+    # Ensure the input is a numeric array or DataFrame
+    normalized_df = normalized_df.apply(pd.to_numeric, errors='coerce')
     return np.linalg.norm(normalized_df - BAA, axis=1)
 
 # Uygulama
