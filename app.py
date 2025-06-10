@@ -65,8 +65,13 @@ st.title("T2NN MABAC Alternatif ve Ağırlık Skorlama")
 uploaded_file = st.file_uploader("Excel dosyanızı yükleyin (.xlsx)", type=["xlsx"])
 
 if uploaded_file:
+    # Dosyayı oku
     xls = pd.ExcelFile(uploaded_file)
-    alt_df = pd.read_excel(xls, "Alternatives", index_col=0)
+
+    # Alternatives: MultiIndex index + MultiIndex columns
+    alt_df = pd.read_excel(xls, "Alternatives", header=[0, 1], index_col=[0, 1])
+    
+    # Weights: Kriter isimleri satır, DM'ler sütun
     wt_df = pd.read_excel(xls, "Weights", index_col=0)
 
     st.subheader("Yüklenen Alternatif Verileri")
@@ -76,11 +81,19 @@ if uploaded_file:
     st.dataframe(wt_df)
 
     # Alternatif skor matrisini hesapla
-    alt_scores = pd.DataFrame(index=alt_df.index, columns=alt_df.columns.levels[0])
-    for alt in alt_df.index:
-        for crit in alt_df.columns.levels[0]:
-            values = [get_t2nn_from_linguistic(alt_df[crit][dm][alt]) for dm in alt_df[crit].columns]
-            merged = merge_t2nn_vectors(values)
+    alternatives = alt_df.index.get_level_values(0).unique()
+    criteria = alt_df.columns.get_level_values(0).unique()
+    decision_makers = alt_df.columns.get_level_values(1).unique()
+
+    alt_scores = pd.DataFrame(index=alternatives, columns=criteria)
+
+    for alt in alternatives:
+        for crit in criteria:
+            t2nns = []
+            for dm in decision_makers:
+                val = alt_df.loc[(alt, dm), (crit, dm)]
+                t2nns.append(get_t2nn_from_linguistic(val))
+            merged = merge_t2nn_vectors(t2nns)
             score = score_from_merged_t2nn(merged)
             alt_scores.loc[alt, crit] = round(score, 4)
 
@@ -96,4 +109,3 @@ if uploaded_file:
 
     st.subheader("Kriter Ağırlıkları (Skorlar)")
     st.dataframe(weight_scores)
-
