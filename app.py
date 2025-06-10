@@ -51,20 +51,21 @@ if uploaded_file:
     n_dms = 4
     n_alternatives = len(df) // n_dms
 
-    final_matrix = pd.DataFrame()
-    alternatives = []
+   criteria_names = weights_df["Criteria No"].tolist()  # ['C1', ..., 'C18']
+
+   final_matrix = pd.DataFrame()
+   alternatives = []
 
     for i in range(n_alternatives):
-        criteria_cols = [f"C{i+1}" for i in range(n_criteria)]
-        group = df.iloc[i * n_dms:(i + 1) * n_dms][criteria_cols]
+        group = df.iloc[i * n_dms:(i + 1) * n_dms][criteria_names]  # Sadece doğru sütunlar
         scored = group.applymap(get_valid_numeric_values)
         avg_scores = scored.mean(axis=0)
         final_matrix.loc[i] = avg_scores
         alt_name = df.iloc[i * n_dms, 0]
         alternatives.append(alt_name.strip() if isinstance(alt_name, str) else f"A{i+1}")
 
-    final_matrix.index = alternatives
-    final_matrix.columns = weights_df["Criteria No"]
+final_matrix.index = alternatives
+final_matrix.columns = criteria_names
 
     # Normalizasyon
     normalized_df = pd.DataFrame(index=final_matrix.index)
