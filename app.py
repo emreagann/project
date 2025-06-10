@@ -89,11 +89,11 @@ elif input_method == "Manual Entry":
                 row.append(st.selectbox(f"A{a+1} - DM{d+1} - {c}", list(linguistic_vars.keys()), key=f"A{a+1}_DM{d+1}_{c}"))
             data.append([f"A{a+1}"] + row)
 
-    df = pd.DataFrame(data, columns=["Alternative"] + criteria_names)
-if 'df' in locals() and 'weights_df' in locals():
-    if 'Alternative' not in df.columns:
-        st.error("❌ 'Alternative' column not found in the Excel file. Please ensure there is a column named 'Alternative'.")
-        st.stop()
+    df = pd.DataFrame(data, columns=["Alternatives"] + criteria_names)
+    if 'df' in locals() and 'weights_df' in locals():
+        if 'Alternatives' not in df.columns:
+            st.error("❌ 'Alternative' column not found in the Excel file. Please ensure there is a column named 'Alternative'.")
+            st.stop()
 
     # Alternatif sayısı: kaç farklı A1, A2, A3, ... var
     alt_counts = df['Alternative'].value_counts()
