@@ -84,14 +84,20 @@ if uploaded_file:
         rows = data_df.iloc[idx:idx+4, 2:]  # 4 karar verici
         scores = []
         for col in rows.columns:
-            terms = rows[col].tolist()
-            t2nn_values = [linguistic_to_t2nn_alternatives[str(term).strip()] for term in terms]
-            avg_T = np.mean([x[0] for x in t2nn_values], axis=0)
-            avg_I = np.mean([x[1] for x in t2nn_values], axis=0)
-            avg_F = np.mean([x[2] for x in t2nn_values], axis=0)
-            score = t2nn_score(avg_T, avg_I, avg_F)
-            scores.append(score)
-        score_matrix.append(scores)
+    terms = rows[col].tolist()
+    t2nn_values = [
+        linguistic_to_t2nn_alternatives.get(str(term).strip())
+        for term in terms
+        if pd.notna(term) and linguistic_to_t2nn_alternatives.get(str(term).strip()) is not None
+    ]
+    if len(t2nn_values) > 0:
+        avg_T = np.mean([x[0] for x in t2nn_values], axis=0)
+        avg_I = np.mean([x[1] for x in t2nn_values], axis=0)
+        avg_F = np.mean([x[2] for x in t2nn_values], axis=0)
+        score = t2nn_score(avg_T, avg_I, avg_F)
+    else:
+        score = 0
+    scores.append(score)
 
     score_matrix = np.array(score_matrix)
 
