@@ -120,25 +120,25 @@ if uploaded_file:
 
     # Genişletilmiş tablo: T, I, F + skor + normalize
   # Ağırlık skorlarını hesapla
-detailed_weights = pd.DataFrame(columns=[
+    detailed_weights = pd.DataFrame(columns=[
     'T1', 'T2', 'T3', 'I1', 'I2', 'I3', 'F1', 'F2', 'F3', 'Score', 'Normalized'
-], index=wt_df.index)
+    ], index=wt_df.index)
 
-for crit in wt_df.index:
-    weight_list = [get_weight_t2nn_from_linguistic(wt_df.loc[crit, dm]) for dm in wt_df.columns]
+    for crit in wt_df.index:
+        weight_list = [get_weight_t2nn_from_linguistic(wt_df.loc[crit, dm]) for dm in wt_df.columns]
 
     # T2NN'leri topla ve ortala
-    combined = combine_weights_t2nns(weight_list)
+        combined = combine_weights_t2nns(weight_list)
 
     # I ve F'yi sıfırla (Eq. 21)
-    adjusted = zero_out_I_and_F(combined)
+        adjusted = zero_out_I_and_F(combined)
 
     # Skor hesapla (Eq. 20)
-    score = score_from_merged_t2nn(adjusted)
+        score = score_from_merged_t2nn(adjusted)
 
     # Detaylı tabloya ekle
-    (t1, t2, t3), (i1, i2, i3), (f1, f2, f3) = combined
-    detailed_weights.loc[crit] = [t1, t2, t3, i1, i2, i3, f1, f2, f3, score, 0]
+        (t1, t2, t3), (i1, i2, i3), (f1, f2, f3) = combined
+        detailed_weights.loc[crit] = [t1, t2, t3, i1, i2, i3, f1, f2, f3, score, 0]
 
 # Normalize et
 total_score = detailed_weights['Score'].sum()
