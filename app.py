@@ -88,6 +88,31 @@ def combine_multiple_decision_makers(alt_df, decision_makers, criteria, alternat
     
     return combined_results
 
+# Ağırlıklar için de aynı işlemi yapalım
+def combine_weights(alt_df, decision_makers, criteria):
+    combined_weights = {}
+
+    # Her kriter için karar vericilerin birleşimini hesapla
+    for crit in criteria:
+        weight_list = []
+        
+        # Tüm karar vericiler için ağırlıkları al
+        for dm in decision_makers:
+            try:
+                val = alt_df.loc[(crit, dm)]
+            except KeyError:
+                val = None
+            weight_list.append(get_weight_t2nn_from_linguistic(val))
+        
+        # Karar vericiler arasındaki birleşimi yap
+        merged_weight = combine_weights_t2nns(weight_list)  # Bu fonksiyon ⊕ işlemini yapar
+
+        # Skoru hesapla
+        score = score_from_merged_t2nn(merged_weight)
+        combined_weights[crit] = round(score, 4)
+    
+    return combined_weights
+
 # --- Streamlit Arayüzü ---
 st.title("T2NN MABAC Alternatif ve Ağırlık Skorlama")
 
@@ -109,6 +134,13 @@ if uploaded_file:
     wt_df = pd.read_excel(xls, "Weights", index_col=0)
     wt_df = wt_df[wt_df.index.notna()]  # NaN index varsa çıkar
 
+    # --- GÖRSELLER ---
+    st.subheader("Yüklenen Alternatif Verileri")
+    st.dataframe(alt_df.reset_index())
+
+    st.subheader("Yüklenen Ağırlık Verileri")
+    st.dataframe(wt_df)
+
     # --- Alternatif skorlarını hesapla ---
     alternatives = alt_df.index.get_level_values(0).unique()
     criteria = alt_df.columns.get_level_values(0).unique()
@@ -122,3 +154,12 @@ if uploaded_file:
 
     st.subheader("Karar Matrisi (Birleşik Skorlar)")
     st.dataframe(alt_scores)
+
+    # Ağırlıkların birleşik skorlarını hesapla
+    combined_weights = combine_weights(wt_df, decision_makers, criteria)
+
+    # Ağırlık skorlarını görüntüle
+    weight_scores = pd.DataFrame.from_dict(combined_weights, orient='index', columns=["Score"])
+
+    st.subheader("Birleşik Ağırlıklar (Skorlar)")
+    st.dataframe(weight_scores)
