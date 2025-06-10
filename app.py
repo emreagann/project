@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 
+# --- T2NN sözlükleri ---
 alternative_linguistic_vars = {
     "VB": [0.20, 0.20, 0.10, 0.65, 0.80, 0.85, 0.45, 0.80, 0.70],
     "B":  [0.35, 0.35, 0.10, 0.50, 0.75, 0.80, 0.50, 0.75, 0.65],
@@ -19,13 +20,16 @@ weight_linguistic_vars = {
     "VH": [(0.90, 0.85, 0.95), (0.10, 0.15, 0.10), (0.05, 0.05, 0.10)],
 }
 
-def score_function(values):
+# --- Yardımcı Fonksiyonlar ---
+def score_function(values, is_benefit=True):
     a1, a2, a3, b1, b2, b3, g1, g2, g3 = values
-    return (1 / 12) * (8 + (a1 + 2 * a2 + a3) - (b1 + 2 * b2 + b3) - (g1 + 2 * g2 + g3))
+    score = (1 / 12) * (8 + (a1 + 2 * a2 + a3) - (b1 + 2 * b2 + b3) - (g1 + 2 * g2 + g3))
+    return score if is_benefit else -score
 
-def score_from_merged_t2nn(t2nn):
+def score_from_merged_t2nn(t2nn, is_benefit=True):
     (a1, a2, a3), (b1, b2, b3), (g1, g2, g3) = t2nn
-    return (1 / 12) * (8 + (a1 + 2*a2 + a3) - (b1 + 2*b2 + b3) - (g1 + 2*g2 + g3))
+    score = (1 / 12) * (8 + (a1 + 2*a2 + a3) - (b1 + 2*b2 + b3) - (g1 + 2*g2 + g3))
+    return score if is_benefit else -score
 
 def get_t2nn_from_linguistic(value):
     if pd.isna(value):
@@ -37,37 +41,12 @@ def get_weight_t2nn_from_linguistic(value):
         return ((0, 0, 0), (0, 0, 0), (0, 0, 0))
     return weight_linguistic_vars.get(value.strip(), ((0,0,0), (0,0,0), (0,0,0)))
 
-def merge_t2nn_vectors(t2nn_list):
-    n = len(t2nn_list)
-    merged = []
-    for i in range(3):
-        avg = tuple(sum(vec[i][j] for vec in t2nn_list) / n for j in range(3))
-        merged.append(avg)
-    return tuple(merged)
-
-def t2nn_addition(a, b):
-    return tuple(
-        tuple(a[i][j] + b[i][j] for j in range(3)) for i in range(3)
-    )
-
-def combine_weights_t2nns(weight_list):
-    combined = weight_list[0]
-    for w in weight_list[1:]:
-        combined = t2nn_addition(combined, w)
-    return tuple(tuple(x / len(weight_list) for x in comp) for comp in combined)
-
-def zero_out_I_and_F(t2nn):
-    T, _, _ = t2nn
-    zero = (0.0, 0.0, 0.0)
-    return (T, zero, zero)
-
-def combine_multiple_decision_makers(alt_df, decision_makers, criteria, alternatives):
+def combine_multiple_decision_makers(alt_df, decision_makers, criteria, alternatives, is_benefit=True):
     combined_results = {}
 
     for alt in alternatives:
         for crit in criteria:
             t2nns = []
-            
             for dm in decision_makers:
                 try:
                     val = alt_df.loc[(alt, dm), (crit, dm)]
@@ -76,8 +55,7 @@ def combine_multiple_decision_makers(alt_df, decision_makers, criteria, alternat
                 t2nns.append(get_t2nn_from_linguistic(val))
             
             merged_t2nn = merge_t2nn_vectors(t2nns)
-
-            score = score_from_merged_t2nn(merged_t2nn)
+            score = score_from_merged_t2nn(merged_t2nn, is_benefit)
             combined_results[(alt, crit)] = round(score, 4)
     
     return combined_results
@@ -96,26 +74,15 @@ def combine_weights(alt_df, decision_makers, criteria):
             weight_list.append(get_weight_t2nn_from_linguistic(val))
         
         merged_weight = combine_weights_t2nns(weight_list)
-
         score = score_from_merged_t2nn(merged_weight)
         combined_weights[crit] = round(score, 4)
     
     return combined_weights
 
-def min_max_normalization(matrix):
-    min_values = matrix.min(axis=0)
-    max_values = matrix.max(axis=0)
-    normalized = (matrix - min_values) / (max_values - min_values)
-    return normalized
-
-def calculate_mabac(normalized_matrix, weights):
-    weighted_matrix = normalized_matrix * weights
-    distance_from_border = weighted_matrix.sum(axis=1)
-    return distance_from_border
-
+# --- Streamlit Arayüzü ---
 st.title("T2NN MABAC Alternatif ve Ağırlık Skorlama")
 
-uploaded_file = st.file_uploader("Excel dosyanızı yükleyin (.xlsx)", type=["xlsx"])
+uploaded_file = st.file_uploader("Upload your Excel file (.xlsx)", type=["xlsx"])
 
 if uploaded_file:
     xls = pd.ExcelFile(uploaded_file)
@@ -130,33 +97,41 @@ if uploaded_file:
     wt_df = pd.read_excel(xls, "Weights", index_col=0)
     wt_df = wt_df[wt_df.index.notna()]
 
-    st.subheader("Yüklenen Alternatif Verileri")
+    st.subheader("Loaded Alternatives Data")
     st.dataframe(alt_df.reset_index())
 
-    st.subheader("Yüklenen Ağırlık Verileri")
+    st.subheader("Loaded Weights Data")
     st.dataframe(wt_df)
 
     alternatives = alt_df.index.get_level_values(0).unique()
     criteria = alt_df.columns.get_level_values(0).unique()
     decision_makers = alt_df.columns.get_level_values(1).unique()
 
-    combined_results = combine_multiple_decision_makers(alt_df, decision_makers, criteria, alternatives)
+    # User selection for Benefit or Cost
+    decision_type = st.radio("Select Decision Type", ("Benefit", "Cost"))
+    is_benefit = decision_type == "Benefit"
+
+    # Manual entry section for alternatives and weights
+    st.subheader("Manual Entry Section for Alternatives and Weights")
+    manual_data = {}
+    for alt in alternatives:
+        for crit in criteria:
+            manual_data[(alt, crit)] = st.text_input(f"Enter linguistic value for {alt} under {crit}", "")
+
+    # Process manual entries into DataFrame
+    manual_df = pd.DataFrame(manual_data)
+    manual_df.index = pd.MultiIndex.from_tuples(manual_data.keys(), names=["Alternative", "Criteria"])
+
+    # Calculate scores based on manual data
+    combined_results = combine_multiple_decision_makers(manual_df, decision_makers, criteria, alternatives, is_benefit)
     alt_scores = pd.DataFrame.from_dict(combined_results, orient='index', columns=["Score"])
 
-    st.subheader("Karar Matrisi (Birleşik Skorlar)")
+    st.subheader("Decision Matrix (Combined Scores)")
     st.dataframe(alt_scores)
 
-    combined_weights = combine_weights(wt_df, decision_makers, criteria)
+    # Combine weights manually
+    combined_weights = combine_weights(manual_df, decision_makers, criteria)
     weight_scores = pd.DataFrame.from_dict(combined_weights, orient='index', columns=["Score"])
 
-    st.subheader("Birleşik Ağırlıklar (Skorlar)")
+    st.subheader("Combined Weights (Scores)")
     st.dataframe(weight_scores)
-
-    normalized_alternatives = min_max_normalization(alt_scores)
-    normalized_weights = min_max_normalization(pd.DataFrame(combined_weights, index=criteria).T)
-
-    mabac_scores = calculate_mabac(normalized_alternatives, normalized_weights)
-
-    st.subheader("MABAC Sonuçları")
-    mabac_results = pd.DataFrame(mabac_scores, index=alternatives, columns=["MABAC Score"]).sort_values(by="MABAC Score", ascending=False)
-    st.dataframe(mabac_results)
