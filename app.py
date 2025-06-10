@@ -15,7 +15,7 @@ linguistic_vars = {
 
 def score_function(values):
     a1, a2, a3, b1, b2, b3, g1, g2, g3 = values
-    return (1 / 12) * (8 + (a1 + 2 * a2 + a3) - (b1 + 2 * b2 + b3) - (g1 + 2 * g2 + g3))
+    return (1 / 12) * ((a1 + 2 * a2 + a3) - (b1 + 2 * b2 + b3) - (g1 + 2 * g2 + g3))
 
 
 def get_valid_numeric_values(value):
