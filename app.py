@@ -2,9 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 
-# ---------------------------
-# Yardımcı Fonksiyonlar
-# ---------------------------
+
 
 def t2nn_score(T, I, F):
     return (1/12) * ((8 + (T[0] + 2*T[1] + T[2]) - (I[0] + 2*I[1] + I[2]) - (F[0] + 2*F[1] + F[2])))
