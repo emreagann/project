@@ -53,12 +53,14 @@ def apply_weights(normalized_df, weights):
     return normalized_df * weights
 
 # BAA Hesaplama
-def calculate_BAA(normalized_df):
-    return normalized_df.prod(axis=0)**(1/len(normalized_df))
+def calculate_BAA(weighted_df):
+    # Kriter bazında geometrik ortalama (sütun bazında)
+    return weighted_df.prod(axis=0)**(1/weighted_df.shape[0])
 
-# Mesafe Matrisini Hesaplama
-def calculate_distances(normalized_df, BAA):
-    return np.linalg.norm(normalized_df - BAA, axis=1)
+def calculate_distances(weighted_df, BAA):
+    # Her alternatif için Euclidean mesafesi
+    diff = weighted_df - BAA
+    return np.sqrt(np.sum(diff**2, axis=1))
 
 # Uygulama
 st.title('Dilsel Değer Dönüşümü ve Skor Hesaplama')
