@@ -1,114 +1,59 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
 
-st.set_page_config(page_title="T2NN-MABAC Decision Support", layout="wide")
-st.title("T2NN-MABAC Decision Support System")
+# Skor fonksiyonunu tanımlayalım
+def calculate_score(alpha, beta, gamma):
+    return (1/12) * (8 + (alpha + 2*beta + gamma) - (beta + 2*gamma + gamma))
 
-# Step 1: Mode selection
-mode = st.radio("Select Input Mode", ["Manual Input", "Upload Excel File"])
+# Linguistik değerler (örnek olarak verildi, eksikler eklenebilir)
+linguistic_values = {
+    'Very Bad (VB)': [0.2, 0.2, 0.1, 0.65, 0.8, 0.85, 0.45, 0.8, 0.7],
+    'Bad (B)': [0.35, 0.35, 0.35, 0.75, 0.8, 0.9, 0.5, 0.75, 0.65],
+    'Medium Bad (MB)': [0.4, 0.45, 0.4, 0.75, 0.85, 0.95, 0.6, 0.8, 0.7],
+    'Medium (M)': [0.4, 0.45, 0.5, 0.8, 0.85, 0.9, 0.6, 0.8, 0.75],
+    'Medium Good (MG)': [0.6, 0.55, 0.5, 0.85, 0.9, 0.95, 0.75, 0.85, 0.8],
+    'Good (G)': [0.7, 0.7, 0.75, 0.9, 0.95, 1.0, 0.85, 0.9, 0.85],
+    'Very Good (VG)': [0.95, 0.95, 0.9, 1.0, 1.0, 1.0, 0.95, 0.95, 0.9]
+}
 
-# Step 2: Editable Linguistic Scale
-st.sidebar.header("Linguistic Scale Mapping")
-def default_linguistic_mapping():
-    return {
-        "VL": 0.2,
-        "L": 0.4,
-        "M": 0.6,
-        "G": 0.8,
-        "VG": 1.0
-    }
+# Streamlit arayüzü
+st.title("MABAC Karar Matrisi Hesaplama")
 
-linguistic_mapping = {}
-st.sidebar.write("Define the mapping from linguistic terms to scores:")
-defs = default_linguistic_mapping()
-for label, default in defs.items():
-    linguistic_mapping[label] = st.sidebar.number_input(f"{label}", min_value=0.0, max_value=1.0, value=default, step=0.1)
+uploaded_file = st.file_uploader("Excel dosyasını yükleyin", type=["xlsx"])
 
-# Step 3: Input handling
-data = None
-if mode == "Upload Excel File":
-    uploaded_file = st.file_uploader("Upload your Excel file", type=["xlsx"])
-    if uploaded_file:
-        df = pd.read_excel(uploaded_file, header=0)
-        data = df
-        st.write("### Uploaded Data")
-        st.dataframe(df)
-else:
-    st.write("### Manual Input")
-    n_alternatives = st.number_input("Number of Alternatives", min_value=1, value=3)
-    n_criteria = st.number_input("Number of Criteria", min_value=1, value=3)
-    n_dms = 4
+if uploaded_file is not None:
+    # Excel dosyasını oku
+    df = pd.read_excel(uploaded_file, sheet_name="Alternatives")
+    weights_df = pd.read_excel(uploaded_file, sheet_name="Weights")
 
-    manual_data = []
-    for a in range(n_alternatives):
-        alt_row = []
-        for c in range(n_criteria):
-            dm_values = []
-            for d in range(n_dms):
-                dm_value = st.selectbox(
-                    f"Alt {a+1}, Crit {c+1}, DM {d+1}", list(linguistic_mapping.keys()),
-                    key=f"A{a}_C{c}_DM{d}"
-                )
-                dm_values.append(linguistic_mapping[dm_value])
-            avg_score = np.mean(dm_values)
-            alt_row.append(avg_score)
-        manual_data.append(alt_row)
-    data = pd.DataFrame(manual_data, columns=[f"C{i+1}" for i in range(n_criteria)])
-    st.write("### Averaged T2NN Score Matrix")
-    st.dataframe(data)
+    # Linguistik terimleri sayılara dönüştürme fonksiyonu
+    def convert_linguistic_to_score(value, linguistic_values):
+        return linguistic_values.get(value, [0, 0, 0])
 
-# Proceed only if data is available
-if data is not None:
-    st.subheader("Step 4: MABAC Processing")
+    # Alternatifler ve karar vericiler için skorlama işlemi
+    score_matrix = []
+    for row in df.itertuples():
+        alternative_scores = []
+        for i, decision_maker in enumerate(row[1:], 1):
+            linguistic_score = convert_linguistic_to_score(decision_maker, linguistic_values)
+            score = calculate_score(*linguistic_score)  # Skoru hesapla
+            alternative_scores.append(score)
+        score_matrix.append(alternative_scores)
 
-    # User input for criteria types and weights
-    st.write("#### Define Criteria Types and Weights")
-    col1, col2 = st.columns(2)
-    with col1:
-        criterion_types = [
-            st.selectbox(f"Criterion {col}", ["Benefit", "Cost"], key=f"ctype_{col}")
-            for col in data.columns
-        ]
-    with col2:
-        criterion_weights = [
-            st.number_input(f"Weight for {col}", min_value=0.0, max_value=1.0, value=1.0/len(data.columns), key=f"w_{col}")
-            for col in data.columns
-        ]
+    # Skor matrisini dataframe olarak göster
+    score_df = pd.DataFrame(score_matrix, columns=[f"DM{i}" for i in range(1, 5)], index=df['Alternatives'])
+    st.write("Karar Vericilerin Skor Matrisi:", score_df)
 
-    # Normalize matrix
-    norm_data = data.copy()
-    for i, col in enumerate(data.columns):
-        if criterion_types[i] == "Benefit":
-            norm_data[col] = (data[col] - data[col].min()) / (data[col].max() - data[col].min())
-        else:  # Cost
-            norm_data[col] = (data[col].max() - data[col]) / (data[col].max() - data[col].min())
+    # Ağırlıkları işleme (linguistikse)
+    weight_scores = []
+    for col in weights_df.columns:
+        weight_values = weights_df[col].apply(lambda x: convert_linguistic_to_score(x, linguistic_values))
+        weight_scores.append([calculate_score(*weight) for weight in weight_values])
 
-    st.write("#### Normalized Matrix")
-    st.dataframe(norm_data)
+    # Ağırlıklı karar matrisini oluşturma
+    weight_df = pd.DataFrame(weight_scores, columns=weights_df.columns, index=weights_df.index)
+    st.write("Ağırlıklı Karar Matrisi:", weight_df)
 
-    # Weighted normalized matrix (G matrix)
-    weighted_matrix = norm_data.copy()
-    for i, col in enumerate(data.columns):
-        weighted_matrix[col] = norm_data[col] * criterion_weights[i]
-
-    st.write("#### Weighted Normalized Matrix (G)")
-    st.dataframe(weighted_matrix)
-
-    # Border Approximation Area (BAA)
-    baa = weighted_matrix.mean(axis=0)
-    st.write("#### Border Approximation Area (BAA)")
-    st.dataframe(pd.DataFrame([baa], index=["BAA"]))
-
-    # Distance Matrix
-    distance_matrix = weighted_matrix - baa
-    st.write("#### Distance Matrix")
-    st.dataframe(distance_matrix)
-
-    # Final MABAC Scores
-    mabac_scores = distance_matrix.sum(axis=1)
-    results = pd.DataFrame({"Alternative": [f"A{i+1}" for i in range(len(mabac_scores))], "MABAC Score": mabac_scores})
-    results = results.sort_values("MABAC Score", ascending=False)
-
-    st.write("### Final Ranking")
-    st.dataframe(results.reset_index(drop=True))
+    # Ortalamayı alarak T2NN karar matrisi oluşturma
+    avg_scores = score_df.mean(axis=1)
+    st.write("T2NN Karar Matrisi:", avg_scores)
