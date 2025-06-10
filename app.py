@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 
+# Linguistic variables and their corresponding T2NN values
 linguistic_vars = {
     "VB": [0.2, 0.2, 0.1, 0.65, 0.8, 0.85, 0.45, 0.8, 0.7],
     "B": [0.35, 0.35, 0.1, 0.5, 0.75, 0.8, 0.5, 0.75, 0.65],
@@ -15,25 +16,19 @@ linguistic_vars = {
 def score_function(values):
     alpha_alpha, alpha_beta, alpha_gamma, beta_alpha, beta_beta, beta_gamma, gamma_alpha, gamma_beta, gamma_gamma = values
     score = (1 / 12) * (
-        8 * alpha_alpha + 2 * alpha_beta + alpha_gamma - 
-        beta_alpha - 2 * beta_beta - beta_gamma - 
+        8 * alpha_alpha + 2 * alpha_beta + alpha_gamma -
+        beta_alpha - 2 * beta_beta - beta_gamma -
         gamma_alpha - 2 * gamma_beta - gamma_gamma
     )
     return score
 
 def get_valid_numeric_values(value):
-    numeric_values = linguistic_vars.get(value)
+    numeric_values = linguistic_vars.get(str(value).strip())
     if numeric_values is not None:
         return score_function(numeric_values)
-    return 0  # Geçersiz bir değer geldiğinde 0 döndürülür
+    return 0
 
 def normalize_data(df, criteria_type):
-    try:
-        df = pd.to_numeric(df, errors='coerce')
-    except Exception as e:
-        st.error(f"Veri dönüştürme hatası: {e}")
-        return df
-
     if criteria_type == 'benefit':
         return (df - df.min()) / (df.max() - df.min())
     elif criteria_type == 'cost':
@@ -45,10 +40,10 @@ def apply_weights(normalized_df, weights):
         st.error("Ağırlıklar ve kriter sayısı uyuşmuyor!")
         return normalized_df
     return normalized_df * weights
+
 def calculate_BAA(weighted_df):
-    # Kriter bazında geometrik ortalama (her sütun için)
     BAA = weighted_df.prod(axis=0) ** (1 / len(weighted_df))
-    return BAA 
+    return BAA
 
 def calculate_distances(weighted_df, BAA):
     diff = weighted_df.subtract(BAA, axis=1)
@@ -56,37 +51,48 @@ def calculate_distances(weighted_df, BAA):
     distances = np.sqrt(squared_sum)
     return distances
 
+st.title('T2NN MABAC Hesaplama Aracı')
 
-
-st.title('T2NN MABAC Calculation')
-
-uploaded_file = st.file_uploader("Upload Excel File", type="xlsx")
+uploaded_file = st.file_uploader("Excel dosyası yükleyin", type="xlsx")
 
 if uploaded_file is not None:
     df = pd.read_excel(uploaded_file, sheet_name='Alternatives')
     weights_df = pd.read_excel(uploaded_file, sheet_name='Weights')
-    alternatives_values = df.iloc[:, 2:]  
 
+    # İlk iki sütun A1 adı ve kriter adları olsun (örnek: A1, C1, C2...)
+    alternatives = df.iloc[:, :2]
+    criteria_values = df.iloc[:, 2:]  # DM1-DM4 verileri
 
-    criteria_types = weights_df['Type'].tolist()  
-    weights = weights_df['Weight'].tolist()  
+    # Dilsel ifadeleri sayısala çevirip ortalamasını al
+    num_criteria = criteria_values.shape[1] // 4
+    decision_matrix = pd.DataFrame(index=alternatives.index)
 
-    normalized_df = pd.DataFrame(index=alternatives_values.index, columns=alternatives_values.columns)
+    for i in range(num_criteria):
+        group = criteria_values.iloc[:, i*4:(i+1)*4]
+        numeric_scores = group.applymap(get_valid_numeric_values)
+        decision_matrix[f'C{i+1}'] = numeric_scores.mean(axis=1)
 
-    for i, criteria_type in enumerate(criteria_types):
-        normalized_df.iloc[:, i] = normalize_data(alternatives_values.iloc[:, i], criteria_type)
+    criteria_types = weights_df['Type'].tolist()
+    weights = weights_df['Weight'].tolist()
 
+    # Normalizasyon
+    normalized_df = pd.DataFrame(index=decision_matrix.index)
+    for i, col in enumerate(decision_matrix.columns):
+        normalized_df[col] = normalize_data(decision_matrix[col], criteria_types[i])
+
+    # Ağırlıklı normalizasyon
     weighted_df = apply_weights(normalized_df, weights)
 
+    # MABAC hesaplamaları
     BAA = calculate_BAA(weighted_df)
-
     distances = calculate_distances(weighted_df, BAA)
 
+    # Sonuçları göster
+    alternatives['MABAC Score'] = distances
+    alternatives['Rank'] = alternatives['MABAC Score'].rank(ascending=False)
 
-    # 4 karar verici için ortalama hesaplama
-    df['MABAC Score'] = distances
-    df['Rank'] = df['MABAC Score'].rank(ascending=False)  # Skorları büyükten küçüğe sırala
+    st.write("Karar Matrisi (Ortalamalar):")
+    st.dataframe(decision_matrix)
 
-    # Sonuçları dataframe'e ekle
-    st.write("MABAC Skorları ve Sıralama")
-    st.dataframe(df[['MABAC Score', 'Rank']])
+    st.write("MABAC Skorları ve Sıralama:")
+    st.dataframe(alternatives[['MABAC Score', 'Rank']])
