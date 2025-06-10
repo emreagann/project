@@ -58,8 +58,11 @@ def combine_weights_t2nns(weight_list):
         combined = t2nn_addition(combined, w)
     return tuple(tuple(x / len(weight_list) for x in comp) for comp in combined)
 
-# --- Streamlit Arayüzü ---
+def zero_out_I_and_F(t2nn):
+    T, I, F = t2nn
+    return (T, (0, 0, 0), (0, 0, 0))
 
+# --- Streamlit Arayüzü ---
 st.title("T2NN MABAC Alternatif ve Ağırlık Skorlama")
 
 uploaded_file = st.file_uploader("Excel dosyanızı yükleyin (.xlsx)", type=["xlsx"])
@@ -111,38 +114,37 @@ if uploaded_file:
     st.dataframe(alt_scores)
 
     # --- Ağırlık skorlarını hesapla ---
-  # --- Ağırlık skorlarını hesapla ---
     weight_scores = pd.Series(index=wt_df.index, dtype=float)
 
-# Genişletilmiş tablo: T, I, F + skor + normalize
+    # Genişletilmiş tablo: T, I, F + skor + normalize
     detailed_weights = pd.DataFrame(columns=[
-    'T1', 'T2', 'T3', 'I1', 'I2', 'I3', 'F1', 'F2', 'F3', 'Score', 'Normalized'
+        'T1', 'T2', 'T3', 'I1', 'I2', 'I3', 'F1', 'F2', 'F3', 'Score', 'Normalized'
     ], index=wt_df.index)
 
     for crit in wt_df.index:
         weight_list = [get_weight_t2nn_from_linguistic(wt_df.loc[crit, dm]) for dm in wt_df.columns]
 
-    # Eq. (14): T2NN'leri topla ve ortala
+        # Eq. (14): T2NN'leri topla ve ortala
         combined = combine_weights_t2nns(weight_list)
 
-    # Eq. (21): I ve F bileşenlerini sıfırla
+        # Eq. (21): I ve F bileşenlerini sıfırla
         adjusted = zero_out_I_and_F(combined)
 
-    # Eq. (20): Skor hesapla
+        # Eq. (20): Skor hesapla
         score = score_from_merged_t2nn(adjusted)
 
-    # Detaylı tabloya ekle
-    (t1, t2, t3), (i1, i2, i3), (f1, f2, f3) = combined
+        # Detaylı tabloya ekle
+        (t1, t2, t3), (i1, i2, i3), (f1, f2, f3) = combined
         detailed_weights.loc[crit] = [t1, t2, t3, i1, i2, i3, f1, f2, f3, score, 0]
         weight_scores[crit] = round(score, 4)
 
-# Normalize işlemi
+    # Normalize işlemi
     total_score = detailed_weights['Score'].sum()
     detailed_weights['Normalized'] = detailed_weights['Score'] / total_score
 
-# Görselleştirme
-st.subheader("Birleştirilmiş T2NN Ağırlıklar + Skor + Normalize")
-st.dataframe(detailed_weights.style.format(precision=4))
+    # Görselleştirme
+    st.subheader("Birleştirilmiş T2NN Ağırlıklar + Skor + Normalize")
+    st.dataframe(detailed_weights.style.format(precision=4))
 
-st.subheader("Kriter Ağırlıkları (Skorlar)")
-st.dataframe(weight_scores)
+    st.subheader("Kriter Ağırlıkları (Skorlar)")
+    st.dataframe(weight_scores)
