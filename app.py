@@ -81,7 +81,7 @@ if input_method == "Upload Excel File":
         if "Alternative" in df.columns:
             df.rename(columns={"Alternative": "Alternatives"}, inplace=True)
 
-        criteria_names = weights_df_raw["Criteria No"].tolist()
+       criteria_names = weights_df_raw.columns[1:].tolist()
 
         # Process criteria weights: average all DMs' T2NNs
         merged_weights = {}
