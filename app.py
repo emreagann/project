@@ -62,6 +62,7 @@ def zero_out_I_and_F(t2nn):
     T, _, _ = t2nn
     zero = (0.0, 0.0, 0.0)
     return (T, zero, zero)
+
 def combine_multiple_decision_makers(alt_df, decision_makers, criteria, alternatives):
     combined_results = {}
 
@@ -70,54 +71,22 @@ def combine_multiple_decision_makers(alt_df, decision_makers, criteria, alternat
         for crit in criteria:
             t2nns = []
             
-            # Her DM için T2NN değerlerini alıyoruz
+            # Tüm karar vericiler için T2NN'leri al
             for dm in decision_makers:
                 try:
                     val = alt_df.loc[(alt, dm), (crit, dm)]
                 except KeyError:
                     val = None
                 t2nns.append(get_t2nn_from_linguistic(val))
-
-            # α-bileşenini toplamlarını ve çarpımlarını alarak hesapla
-            alpha_values = [t2nn[0][0] for t2nn in t2nns]
-            alpha_sum = sum(alpha_values)  # α toplamı
-            alpha_product = 1
-            for val in alpha_values:
-                alpha_product *= val
-
-            # β ve γ bileşenlerini sadece çarpma işlemi ile birleştir
-            beta_values = [t2nn[1][0] for t2nn in t2nns]
-            gamma_values = [t2nn[2][0] for t2nn in t2nns]
-
-            beta_product = 1
-            for val in beta_values:
-                beta_product *= val
-
-            gamma_product = 1
-            for val in gamma_values:
-                gamma_product *= val
-
-            # Bileşimi hesapla (Formül 14)
-            merged_t2nn = (
-                (alpha_sum + alpha_product),  # α-bileşeni (Toplam ve Çarpım)
-                beta_product,                  # β-bileşeni (Çarpım)
-                gamma_product                  # γ-bileşeni (Çarpım)
-            )
+            
+            # Karar vericiler arasındaki birleşimi yap
+            merged_t2nn = merge_t2nn_vectors(t2nns)  # Bu fonksiyon ⊕ işlemini yapar
 
             # Skoru hesapla
             score = score_from_merged_t2nn(merged_t2nn)
             combined_results[(alt, crit)] = round(score, 4)
     
     return combined_results
-
-# --- Main --- 
-combined_results = combine_multiple_decision_makers(alt_df, decision_makers, criteria, alternatives)
-
-# Sonuçları görüntüle
-alt_scores = pd.DataFrame.from_dict(combined_results, orient='index', columns=["Score"])
-
-st.subheader("Karar Matrisi (Birleşik Skorlar)")
-st.dataframe(alt_scores)
 
 # --- Streamlit Arayüzü ---
 st.title("T2NN MABAC Alternatif ve Ağırlık Skorlama")
@@ -140,75 +109,16 @@ if uploaded_file:
     wt_df = pd.read_excel(xls, "Weights", index_col=0)
     wt_df = wt_df[wt_df.index.notna()]  # NaN index varsa çıkar
 
-    # --- GÖRSELLER ---
-    st.subheader("Yüklenen Alternatif Verileri")
-    st.dataframe(alt_df.reset_index())
-
-    st.subheader("Yüklenen Ağırlık Verileri")
-    st.dataframe(wt_df)
-
     # --- Alternatif skorlarını hesapla ---
     alternatives = alt_df.index.get_level_values(0).unique()
     criteria = alt_df.columns.get_level_values(0).unique()
     decision_makers = alt_df.columns.get_level_values(1).unique()
 
-    # Alternatif skorlarını hesapla
-    alt_scores = pd.DataFrame(index=alternatives, columns=criteria)
+    # Karar vericilerin birleşik sonuçlarını hesapla
+    combined_results = combine_multiple_decision_makers(alt_df, decision_makers, criteria, alternatives)
 
-    for alt in alternatives:
-        for crit in criteria:
-            t2nns = []
-            
-            # Her DM için T2NN değerlerini alıyoruz
-            for dm in decision_makers:
-                try:
-                    val = alt_df.loc[(alt, dm), (crit, dm)]
-                except KeyError:
-                    val = None
-                t2nns.append(get_t2nn_from_linguistic(val))
-            
-            # T2NN'leri birleştir
-            merged_t2nn = merge_t2nn_vectors(t2nns)
+    # Sonuçları görüntüle
+    alt_scores = pd.DataFrame.from_dict(combined_results, orient='index', columns=["Score"])
 
-            # Skoru hesapla
-            score = score_from_merged_t2nn(merged_t2nn)
-            alt_scores.loc[alt, crit] = round(score, 4)
-
-    st.subheader("Ortalama Karar Matrisi (Skorlar)")
+    st.subheader("Karar Matrisi (Birleşik Skorlar)")
     st.dataframe(alt_scores)
-
-    # --- Ağırlık skorlarını hesapla ---
-    weight_scores = pd.Series(index=wt_df.index, dtype=float)
-
-    # Genişletilmiş tablo: T, I, F + skor + normalize
-    detailed_weights = pd.DataFrame(columns=[
-        'T1', 'T2', 'T3', 'I1', 'I2', 'I3', 'F1', 'F2', 'F3', 'Score', 'Normalized'
-    ], index=wt_df.index)
-
-    for crit in wt_df.index:
-        weight_list = [get_weight_t2nn_from_linguistic(wt_df.loc[crit, dm]) for dm in wt_df.columns]
-
-        # T2NN'leri topla ve ortala
-        combined = combine_weights_t2nns(weight_list)
-
-        # I ve F'yi sıfırla
-        adjusted = zero_out_I_and_F(combined)
-
-        # Skoru hesapla
-        score = score_from_merged_t2nn(adjusted)
-
-        # Detaylı tabloya ekle
-        (t1, t2, t3), (i1, i2, i3), (f1, f2, f3) = combined
-        detailed_weights.loc[crit] = [t1, t2, t3, i1, i2, i3, f1, f2, f3, score, 0]
-
-    # Normalize et
-    total_score = detailed_weights['Score'].sum()
-    detailed_weights['Normalized'] = detailed_weights['Score'] / total_score
-
-    # Görselleştir
-    st.subheader("Birleştirilmiş T2NN Ağırlıklar + Skor + Normalize")
-    st.dataframe(detailed_weights.style.format(precision=4))
-
-    # İsteğe bağlı: sadece skorları gösteren sade tablo
-    st.subheader("Kriter Ağırlıkları (Skorlar)")
-    st.dataframe(detailed_weights[['Score']].style.format(precision=4))
