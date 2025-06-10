@@ -162,7 +162,6 @@ if input_type == "Excel":
 elif input_type == "Manual":
     st.subheader("Manual Entry Section for Alternatives and Weights")
 
-    # Kullanıcıdan manuel veri alalım
     alternatives = st.text_input("Enter Alternatives (comma separated)").split(",")
     criteria = st.text_input("Enter Criteria (comma separated)").split(",")
     decision_makers = st.text_input("Enter Decision Makers (comma separated)").split(",")
