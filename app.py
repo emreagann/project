@@ -13,16 +13,15 @@ alternative_linguistic_vars = {
     "VG": [0.95, 0.90, 0.95, 0.10, 0.10, 0.05, 0.05, 0.05, 0.05],
 }
 
-# Linguistic variables for criteria weights (Table A.1)
+# Corrected linguistic variables for criteria weights (Table A.1)
 weight_linguistic_vars = {
-    "VL": [(0.0, 0.0, 0.1), (0.9, 1.0, 1.0), (0.9, 1.0, 1.0)],
+    "VL": [(0.0, 0.0, 0.1), (0.95, 1.0, 1.0), (0.95, 1.0, 1.0)],
     "L":  [(0.1, 0.2, 0.3), (0.7, 0.8, 0.9), (0.7, 0.8, 0.9)],
     "ML": [(0.2, 0.3, 0.4), (0.6, 0.7, 0.8), (0.6, 0.7, 0.8)],
     "M":  [(0.3, 0.4, 0.5), (0.5, 0.6, 0.7), (0.5, 0.6, 0.7)],
     "MH": [(0.4, 0.5, 0.6), (0.4, 0.5, 0.6), (0.4, 0.5, 0.6)],
     "H":  [(0.5, 0.6, 0.7), (0.3, 0.4, 0.5), (0.3, 0.4, 0.5)],
     "VH": [(0.6, 0.7, 0.8), (0.2, 0.3, 0.4), (0.2, 0.3, 0.4)],
-    "VVL": [(0.0, 0.0, 0.05), (0.95, 1.0, 1.0), (0.95, 1.0, 1.0)],
     "VVH": [(0.7, 0.8, 0.9), (0.1, 0.2, 0.3), (0.1, 0.2, 0.3)]
 }
 
@@ -67,3 +66,4 @@ def calculate_difference_matrix(weighted_df, BAA):
 def calculate_scores(diff_df):
     return diff_df.sum(axis=1)
 
+# The rest of the application logic should be updated to use these mappings for both alternatives and weight scoring.
