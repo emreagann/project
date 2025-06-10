@@ -26,6 +26,10 @@ if uploaded_file is not None:
     df = pd.read_excel(uploaded_file, sheet_name="Alternatives")
     weights_df = pd.read_excel(uploaded_file, sheet_name="Weights")
 
+    # Alternatifler ve Ağırlıklar sayfalarındaki sütun adlarını kontrol et
+    st.write("Alternatives Sayfasındaki Sütunlar:", df.columns)
+    st.write("Weights Sayfasındaki Sütunlar:", weights_df.columns)
+
     # Alternatifler sayfasındaki linguistik değerleri alalım
     linguistic_values_alternatives = {}
     for index, row in df.iterrows():
@@ -34,8 +38,8 @@ if uploaded_file is not None:
     # Weights sayfasındaki linguistik değerleri alalım
     linguistic_values_weights = {}
     for index, row in weights_df.iterrows():
-        linguistic_values_weights[row['Weights']] = row[1:].values.tolist()  # Ağırlıkların linguistik değerlerini al
-
+        linguistic_values_weights[row[weights_df.columns[0]]] = row[1:].values.tolist()  # Ağırlıkların linguistik değerlerini al (ilk sütun adı)
+    
     # Linguistik terimleri sayılara dönüştürme fonksiyonu
     def convert_linguistic_to_score(value, linguistic_values):
         return linguistic_values.get(value, [0, 0, 0, 0, 0, 0, 0, 0, 0])
@@ -73,7 +77,7 @@ if uploaded_file is not None:
         weight_matrix.append(weight_scores)
 
     # Ağırlıkların T2NN sonucu
-    weight_df = pd.DataFrame(weight_matrix, columns=[f"DM{i}" for i in range(1, 5)], index=weights_df['Weights'])
+    weight_df = pd.DataFrame(weight_matrix, columns=[f"DM{i}" for i in range(1, 5)], index=weights_df[weights_df.columns[0]])
     st.write("Ağırlıklar için T2NN Skor Matrisi:", weight_df)
 
     # Weights için normalizasyon
