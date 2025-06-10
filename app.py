@@ -55,7 +55,8 @@ if uploaded_file:
     alternatives = []
 
     for i in range(n_alternatives):
-        group = df.iloc[i * n_dms:(i + 1) * n_dms, 3:3 + n_criteria]
+        criteria_cols = [f"C{i+1}" for i in range(n_criteria)]
+        group = df.iloc[i * n_dms:(i + 1) * n_dms][criteria_cols]
         scored = group.applymap(get_valid_numeric_values)
         avg_scores = scored.mean(axis=0)
         final_matrix.loc[i] = avg_scores
