@@ -17,12 +17,15 @@ if uploaded_file is not None:
     df = pd.read_excel(uploaded_file, sheet_name="Alternatives")
     weights_df = pd.read_excel(uploaded_file, sheet_name="Weights")
 
-    # Alternatifler sayfasındaki linguistik değerleri alalım
+    # Alternatifler ve Ağırlıklar sayfalarındaki sütun adlarını kontrol et
+    st.write("Alternatives Sayfasındaki Sütunlar:", df.columns)
+    st.write("Weights Sayfasındaki Sütunlar:", weights_df.columns)
+
+    # Linguistic Variables sayfalarındaki her sayfadan verileri alalım
     linguistic_values_alternatives = {}
     for index, row in df.iterrows():
         linguistic_values_alternatives[row['Alternatives']] = row[1:].values.tolist()  # Alternatifin linguistik değerlerini al
 
-    # Weights sayfasındaki linguistik değerleri alalım
     linguistic_values_weights = {}
     for index, row in weights_df.iterrows():
         linguistic_values_weights[row['Weights']] = row[1:].values.tolist()  # Ağırlıkların linguistik değerlerini al
