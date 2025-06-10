@@ -70,22 +70,54 @@ def combine_multiple_decision_makers(alt_df, decision_makers, criteria, alternat
         for crit in criteria:
             t2nns = []
             
-            # Tüm karar vericiler için T2NN'leri al
+            # Her DM için T2NN değerlerini alıyoruz
             for dm in decision_makers:
                 try:
                     val = alt_df.loc[(alt, dm), (crit, dm)]
                 except KeyError:
                     val = None
                 t2nns.append(get_t2nn_from_linguistic(val))
-            
-            # Karar vericiler arasındaki birleşimi yap
-            merged_t2nn = merge_t2nn_vectors(t2nns)  # Bu fonksiyon ⊕ işlemini yapar
+
+            # α-bileşenini toplamlarını ve çarpımlarını alarak hesapla
+            alpha_values = [t2nn[0][0] for t2nn in t2nns]
+            alpha_sum = sum(alpha_values)  # α toplamı
+            alpha_product = 1
+            for val in alpha_values:
+                alpha_product *= val
+
+            # β ve γ bileşenlerini sadece çarpma işlemi ile birleştir
+            beta_values = [t2nn[1][0] for t2nn in t2nns]
+            gamma_values = [t2nn[2][0] for t2nn in t2nns]
+
+            beta_product = 1
+            for val in beta_values:
+                beta_product *= val
+
+            gamma_product = 1
+            for val in gamma_values:
+                gamma_product *= val
+
+            # Bileşimi hesapla (Formül 14)
+            merged_t2nn = (
+                (alpha_sum + alpha_product),  # α-bileşeni (Toplam ve Çarpım)
+                beta_product,                  # β-bileşeni (Çarpım)
+                gamma_product                  # γ-bileşeni (Çarpım)
+            )
 
             # Skoru hesapla
             score = score_from_merged_t2nn(merged_t2nn)
             combined_results[(alt, crit)] = round(score, 4)
     
     return combined_results
+
+# --- Main --- 
+combined_results = combine_multiple_decision_makers(alt_df, decision_makers, criteria, alternatives)
+
+# Sonuçları görüntüle
+alt_scores = pd.DataFrame.from_dict(combined_results, orient='index', columns=["Score"])
+
+st.subheader("Karar Matrisi (Birleşik Skorlar)")
+st.dataframe(alt_scores)
 
 # --- Streamlit Arayüzü ---
 st.title("T2NN MABAC Alternatif ve Ağırlık Skorlama")
