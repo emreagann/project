@@ -70,10 +70,12 @@ if uploaded_file:
                 alt_indices.append(i)
 
     # Kriter türlerini kullanıcıdan al
-    st.subheader("Kriter türlerini belirtin (Benefit / Cost)")
-    criterion_types = {}
-    for c in criteria:
-        criterion_types[c] = st.selectbox(f"{c} türü:", ["benefit", "cost"], key=f"type_{c}")
+    criterion_types_row = weight_df.iloc[0, 1:1+len(criteria)].tolist()
+    criterion_types = dict(zip(criteria, [x.strip().lower() for x in criterion_types_row]))
+    
+    # Ağırlıkları veri çerçevesinden temizle (ilk satır türdü, onu çıkar)
+    weight_df = weight_df.iloc[1:].reset_index(drop=True)
+
 
     # Alternatif skor matrisini hesapla
     score_matrix = []
