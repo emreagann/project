@@ -55,14 +55,24 @@ uploaded_file = st.file_uploader("Excel Dosyasını Yükle", type="xlsx")
 if uploaded_file is not None:
     # Excel dosyasını oku
     df = pd.read_excel(uploaded_file, sheet_name='Alternatives')
+    weights_df = pd.read_excel(uploaded_file, sheet_name='Weights')  # Weights sayfasını oku
     alternatives_values = df.iloc[:, 2:]  # Dilsel değerler
+
+    # Weights sayfasından kriter türlerini al
+    criteria_types = weights_df['Type'].tolist()  # 'Type' sütununda kriter türlerini al
 
     # Her bir dilsel değeri sayısal değerlere dönüştür
     valid_numeric_values_df = alternatives_values.applymap(lambda x: get_valid_numeric_values(x))
 
     # Normalize et ve MABAC için BAA hesapla
-    normalized_df = valid_numeric_values_df.applymap(lambda x: normalize_data(pd.Series(x), 'benefit'))
+    normalized_df = pd.DataFrame()
 
+    # Kriter türlerine göre her bir kriteri normalize et
+    for i, criteria_type in enumerate(criteria_types):
+        # İlgili kriter türünü al ve normalize et
+        normalized_df.iloc[:, i] = normalize_data(valid_numeric_values_df.iloc[:, i], criteria_type)
+
+    # BAA hesapla
     BAA = calculate_BAA(normalized_df)
 
     # Mesafeleri hesapla
@@ -70,7 +80,9 @@ if uploaded_file is not None:
 
     # Sonuçları dataframe'e ekle
     df['MABAC Score'] = distances
-    df['Rank'] = df['MABAC Score'].rank()
+
+    # Alternatifleri MABAC skoruna göre sırala
+    df['Rank'] = df['MABAC Score'].rank(ascending=False)  # Skorları büyükten küçüğe sırala
 
     # Skorları ve sıralamayı göster
     st.write("MABAC Skorları ve Sıralama")
