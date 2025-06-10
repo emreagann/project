@@ -90,12 +90,27 @@ elif input_method == "Manual Entry":
             data.append([f"A{a+1}"] + row)
 
     df = pd.DataFrame(data, columns=["Alternative"] + criteria_names)
-
 if 'df' in locals() and 'weights_df' in locals():
-    n_criteria = len(weights_df)
-    n_alternatives = df['Alternatives'].nunique()
-    n_dms = len(df) // n_alternatives
-    criteria_names = weights_df["Criteria No"].tolist()
+    if 'Alternative' not in df.columns:
+        st.error("❌ 'Alternative' column not found in the Excel file. Please ensure there is a column named 'Alternative'.")
+        st.stop()
+
+    # Alternatif sayısı: kaç farklı A1, A2, A3, ... var
+    alt_counts = df['Alternative'].value_counts()
+
+    if alt_counts.empty:
+        st.error("❌ No alternatives found in the 'Alternative' column.")
+        st.stop()
+
+    # DM sayısı: her alternatif için kaç tekrar var
+    n_dms = alt_counts.iloc[0]  # A1 kaç kez geçiyor
+    n_alternatives = len(alt_counts)
+
+    if not (alt_counts == n_dms).all():
+        st.warning("⚠️ Not all alternatives have the same number of decision makers (DMs). Check input structure.")
+
+    st.info(f"🔢 {n_alternatives} alternatives detected, with {n_dms} decision makers per alternative.")
+
 
     final_matrix = pd.DataFrame(columns=criteria_names)
     alternatives = []
