@@ -2,10 +2,16 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 
-# Skor fonksiyonu: T2NN hesaplama
+# Skor fonksiyonunu tanımlayalım
 def calculate_score(linguistic_scores):
     # linguistic_scores: [αα, αβ, αY, βα, ββ, βY, γα, γβ, γγ]
-    alpha_alpha, alpha_beta, alpha_gamma, beta_alpha, beta_beta, beta_gamma, gamma_alpha, gamma_beta, gamma_gamma = linguistic_scores
+    # Bu değerler eksikse varsayılan olarak 0 kullanacağız
+    try:
+        alpha_alpha, alpha_beta, alpha_gamma, beta_alpha, beta_beta, beta_gamma, gamma_alpha, gamma_beta, gamma_gamma = linguistic_scores
+    except ValueError:
+        st.error("Linguistic scores veri formatında bir hata oluştu!")
+        return np.nan
+
     return (1/12) * (8 + (alpha_alpha + 2*alpha_beta + alpha_gamma) - (beta_alpha + 2*beta_beta + beta_gamma) - (gamma_alpha + 2*gamma_beta + gamma_gamma))
 
 # Normalizasyon işlemi (Fayda / Maliyet)
@@ -33,14 +39,23 @@ if uploaded_file is not None:
     weights_df = pd.read_excel(uploaded_file, sheet_name="Weights")
 
     # Alternatifler sayfasındaki linguistik değerleri alalım
-    linguistic_values_alternatives = {}
-    for index, row in df.iterrows():
-        linguistic_values_alternatives[row['Alternatives']] = row[1:].values.tolist()  # Alternatifin linguistik değerlerini al
+    linguistic_values_alternatives = {
+        'Very Bad (VB)': [0.2, 0.2, 0.1, 0.65, 0.8, 0.85, 0.45, 0.8, 0.7],
+        'Bad (B)': [0.35, 0.35, 0.35, 0.75, 0.8, 0.9, 0.5, 0.75, 0.65],
+        'Medium Bad (MB)': [0.4, 0.45, 0.4, 0.75, 0.85, 0.95, 0.6, 0.8, 0.7],
+        'Medium (M)': [0.4, 0.45, 0.5, 0.8, 0.85, 0.9, 0.6, 0.8, 0.75],
+        'Medium Good (MG)': [0.6, 0.55, 0.5, 0.85, 0.9, 0.95, 0.75, 0.85, 0.8],
+        'Good (G)': [0.7, 0.7, 0.75, 0.9, 0.95, 1.0, 0.85, 0.9, 0.85],
+        'Very Good (VG)': [0.95, 0.95, 0.9, 1.0, 1.0, 1.0, 0.95, 0.95, 0.9]
+    }
 
-    # Weights sayfasındaki linguistik değerleri alalım
-    linguistic_values_weights = {}
-    for index, row in weights_df.iterrows():
-        linguistic_values_weights[row[weights_df.columns[0]]] = row[1:].values.tolist()  # Ağırlıkların linguistik değerlerini al
+    linguistic_values_weights = {
+        'Low (L)': [0.2, 0.3, 0.2, 0.6, 0.75, 0.85, 0.45, 0.8, 0.7],
+        'Medium Low (ML)': [0.4, 0.3, 0.25, 0.45, 0.55, 0.6, 0.5, 0.65, 0.55],
+        'Medium (M)': [0.5, 0.55, 0.55, 0.4, 0.45, 0.5, 0.6, 0.75, 0.7],
+        'High (H)': [0.8, 0.75, 0.7, 0.2, 0.25, 0.3, 0.85, 0.9, 0.8],
+        'Very High (VH)': [0.9, 0.85, 0.95, 0.15, 0.1, 0.1, 0.95, 0.9, 0.85]
+    }
 
     # Linguistik terimleri sayılara dönüştürme fonksiyonu
     def convert_linguistic_to_score(value, linguistic_values):
