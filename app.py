@@ -1,13 +1,14 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
 
-# Skor fonksiyonunu tanımlayalım
+# Skor fonksiyonu: T2NN hesaplama
 def calculate_score(linguistic_scores):
     # linguistic_scores: [αα, αβ, αY, βα, ββ, βY, γα, γβ, γγ]
     alpha_alpha, alpha_beta, alpha_gamma, beta_alpha, beta_beta, beta_gamma, gamma_alpha, gamma_beta, gamma_gamma = linguistic_scores
     return (1/12) * (8 + (alpha_alpha + 2*alpha_beta + alpha_gamma) - (beta_alpha + 2*beta_beta + beta_gamma) - (gamma_alpha + 2*gamma_beta + gamma_gamma))
 
-# Normalizasyon işlemi
+# Normalizasyon işlemi (Fayda / Maliyet)
 def normalize_matrix(matrix, is_benefit=True):
     if is_benefit:
         # Fayda normalizasyonu (max-min normalizasyonu)
@@ -15,6 +16,11 @@ def normalize_matrix(matrix, is_benefit=True):
     else:
         # Maliyet normalizasyonu (max-min normalizasyonu)
         return matrix.apply(lambda x: (x.max() - x) / (x.max() - x.min()), axis=0)
+
+# Sınır yaklaşım alanı mesafesi (MABAC skorlarını oluşturma)
+def border_approximation_area_distance(matrix):
+    # Mesafe hesaplama
+    return matrix.apply(lambda x: np.sum(np.abs(x - matrix.mean(axis=1))), axis=1)
 
 # Streamlit arayüzü
 st.title("MABAC Karar Matrisi Hesaplama")
@@ -26,10 +32,6 @@ if uploaded_file is not None:
     df = pd.read_excel(uploaded_file, sheet_name="Alternatives")
     weights_df = pd.read_excel(uploaded_file, sheet_name="Weights")
 
-    # Alternatifler ve Ağırlıklar sayfalarındaki sütun adlarını kontrol et
-    st.write("Alternatives Sayfasındaki Sütunlar:", df.columns)
-    st.write("Weights Sayfasındaki Sütunlar:", weights_df.columns)
-
     # Alternatifler sayfasındaki linguistik değerleri alalım
     linguistic_values_alternatives = {}
     for index, row in df.iterrows():
@@ -38,8 +40,8 @@ if uploaded_file is not None:
     # Weights sayfasındaki linguistik değerleri alalım
     linguistic_values_weights = {}
     for index, row in weights_df.iterrows():
-        linguistic_values_weights[row[weights_df.columns[0]]] = row[1:].values.tolist()  # Ağırlıkların linguistik değerlerini al (ilk sütun adı)
-    
+        linguistic_values_weights[row[weights_df.columns[0]]] = row[1:].values.tolist()  # Ağırlıkların linguistik değerlerini al
+
     # Linguistik terimleri sayılara dönüştürme fonksiyonu
     def convert_linguistic_to_score(value, linguistic_values):
         return linguistic_values.get(value, [0, 0, 0, 0, 0, 0, 0, 0, 0])
@@ -88,6 +90,6 @@ if uploaded_file is not None:
     weighted_decision_matrix = normalized_score_df.multiply(normalized_weight_df, axis=0)
     st.write("Ağırlıklı Karar Matrisi:", weighted_decision_matrix)
     
-    # Ortalamayı alarak T2NN karar matrisi oluşturma
-    avg_scores = weighted_decision_matrix.mean(axis=1)
-    st.write("T2NN Karar Matrisi (Ortalamalar):", avg_scores)
+    # Sınır yaklaşım alanı mesafesi hesaplama (MABAC puanı)
+    distance_matrix = border_approximation_area_distance(weighted_decision_matrix)
+    st.write("Sınır Yaklaşım Alanı Mesafesi:", distance_matrix)
