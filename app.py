@@ -65,16 +65,13 @@ if uploaded_file is not None:
     criteria_types = weights_df['Type'].tolist()  # 'Type' sütununda kriter türlerini al
     weights = weights_df['Weight'].tolist()  # Ağırlıkları al
 
-    # Her bir dilsel değeri sayısal değerlere dönüştür
-    valid_numeric_values_df = alternatives_values.applymap(lambda x: get_valid_numeric_values(x))
-
-    # Normalize et ve MABAC için BAA hesapla
-    normalized_df = pd.DataFrame()
+    # Normalized DataFrame'i oluştur
+    normalized_df = pd.DataFrame(index=alternatives_values.index, columns=alternatives_values.columns)
 
     # Kriter türlerine göre her bir kriteri normalize et
     for i, criteria_type in enumerate(criteria_types):
         # İlgili kriter türünü al ve normalize et
-        normalized_df.iloc[:, i] = normalize_data(valid_numeric_values_df.iloc[:, i], criteria_type)
+        normalized_df.iloc[:, i] = normalize_data(alternatives_values.iloc[:, i], criteria_type)
 
     # Weights ile çarpma
     weighted_df = apply_weights(normalized_df, weights)
