@@ -51,6 +51,13 @@ if input_method == "Upload Excel File":
         df = pd.read_excel(uploaded_file, sheet_name="Alternatives")
         weights_df = pd.read_excel(uploaded_file, sheet_name="Weights")
 
+        # Normalize alternative column name
+        if "Alternative" in df.columns:
+            df = df.rename(columns={"Alternative": "Alternatives"})
+        elif "Alternatives" not in df.columns:
+            st.error("❌ Neither 'Alternative' nor 'Alternatives' column found.")
+            st.stop()
+
         criteria_names = weights_df["Criteria No"].tolist()
         n_dms = 0
         while True:
