@@ -2,20 +2,18 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 
-
-
+# T2NN skor fonksiyonu
 def t2nn_score(T, I, F):
     return (1/12) * ((8 + (T[0] + 2*T[1] + T[2]) - (I[0] + 2*I[1] + I[2]) - (F[0] + 2*F[1] + F[2])))
 
+# Normalize fonksiyonu
 def normalize(scores, typ):
     scores = np.array(scores)
     if scores.max() == scores.min():
         return np.ones_like(scores)
-    if typ == "benefit":
-        return (scores - scores.min()) / (scores.max() - scores.min())
-    else:
-        return (scores.max() - scores) / (scores.max() - scores.min())
+    return (scores - scores.min()) / (scores.max() - scores.min()) if typ == "benefit" else (scores.max() - scores) / (scores.max() - scores.min())
 
+# MABAC adımları
 def weighted_matrix(norm_matrix, weights):
     return norm_matrix * weights
 
@@ -30,6 +28,7 @@ def distance_matrix_calc(V, B):
 def final_scores(D):
     return np.sum(D, axis=1)
 
+# Linguistic T2NN sözlüğünü Excel'den oku
 def load_linguistic_t2nn_dict(df, label_col=0, start_col=1):
     t2nn_dict = {}
     for i in range(len(df)):
@@ -44,48 +43,44 @@ def load_linguistic_t2nn_dict(df, label_col=0, start_col=1):
     return t2nn_dict
 
 # ---------------------------
-# Streamlit Başlangıç
+# Streamlit Arayüzü
 # ---------------------------
-
 st.title("MABAC Yöntemi – Type-2 Neutrosophic Sayılarla")
 
 uploaded_file = st.file_uploader("Excel dosyasını yükleyin", type=["xlsx"])
 if uploaded_file:
     xls = pd.ExcelFile(uploaded_file)
 
+    # Sayfaları oku
     data_df = pd.read_excel(xls, sheet_name="Alternatives", header=None)
     weight_df = pd.read_excel(xls, sheet_name="Weights", header=None)
 
-    # --- Linguistic Tabloları Yükle ---
-    alt_ling_table = data_df.iloc[-7:, :]  # Alternatives sayfasının en altındaki T2NN tablosu
+    # Linguistic T2NN tablolarını yükle
+    alt_ling_table = data_df.iloc[-7:, :]
+    weight_ling_table = weight_df.iloc[2:7, :]
     linguistic_to_t2nn_alternatives = load_linguistic_t2nn_dict(alt_ling_table, label_col=0, start_col=1)
-
-    weight_ling_table = weight_df.iloc[2:7, :]  # Weights sayfasında VH–L tablosu
     linguistic_to_t2nn_weights = load_linguistic_t2nn_dict(weight_ling_table, label_col=2, start_col=3)
 
-    # --- Kriter Türlerini Al ---
-    criteria_types_raw = weight_df.iloc[10:28, :2]  # C1–C18 + tür
+    # Kriter türleri (benefit/cost)
+    criteria_types_raw = weight_df.iloc[10:28, :2]
     criterion_types = {
         str(row[0]).strip(): str(row[1]).strip().lower()
         for _, row in criteria_types_raw.iterrows()
     }
 
-    # --- Alternatifleri ve indekslerini al ---
+    # Alternatifler ve indeksler
     criteria = [f"C{i+1}" for i in range(18)]
     alternatives = []
     alt_indices = []
     for i, val in enumerate(data_df.iloc[:, 0]):
-        if isinstance(val, str) and val.strip().startswith("A"):
-            name = val.strip(":")
-            if name.lower() != "alternatives":
-                alternatives.append(name)
-                alt_indices.append(i)
+        if isinstance(val, str) and val.strip().startswith("A") and val.strip().lower() != "alternatives":
+            alternatives.append(val.strip(":"))
+            alt_indices.append(i)
 
-    # --- Skor Matrisi Hesapla ---
+    # Skor matrisi
     score_matrix = []
     for idx in alt_indices:
-        if idx + 3 >= len(data_df):
-            continue
+        if idx + 3 >= len(data_df): continue
         rows = data_df.iloc[idx:idx+4, 2:]
         scores = []
         for col in rows.columns:
@@ -104,22 +99,21 @@ if uploaded_file:
                 score = 0
             scores.append(score)
         score_matrix.append(scores)
-
     score_matrix = np.array(score_matrix)
 
-    # --- Normalize Et ---
+    # Normalize et
     norm_matrix = []
     for i, c in enumerate(criteria):
         col = score_matrix[:, i]
-        typ = criterion_types.get(c, "benefit")  # default: benefit
+        typ = criterion_types.get(c, "benefit")
         norm = normalize(col, typ)
         norm_matrix.append(norm)
     norm_matrix = np.array(norm_matrix).T
 
-    # --- Ağırlık Hesapla ---
+    # Ağırlık skorları
     weight_scores = []
     for i, c in enumerate(criteria):
-        weights = weight_df.iloc[0:4, i+2].tolist()  # DM1–DM4 satırları, 2. sütundan başla
+        weights = weight_df.iloc[0:4, i+2].tolist()
         t2nns = [
             linguistic_to_t2nn_weights.get(str(w).strip().upper(), ((0,0,0), (0,0,0), (0,0,0)))
             for w in weights
@@ -130,14 +124,14 @@ if uploaded_file:
         score = t2nn_score(avg_T, avg_I, avg_F)
         weight_scores.append(score)
 
-    # --- MABAC ---
+    # MABAC
     V = weighted_matrix(norm_matrix, weight_scores)
     B = border_area_calc(V)
     D = distance_matrix_calc(V, B)
     scores = final_scores(D)
     theta_scores = scores / np.sum(scores)
 
-    # --- Sonuç Göster ---
+    # Sonuç
     result_df = pd.DataFrame({
         "Alternatif": alternatives,
         "Skor": scores,
@@ -146,3 +140,22 @@ if uploaded_file:
 
     st.subheader("Sonuç: Alternatif Sıralaması")
     st.dataframe(result_df.reset_index(drop=True))
+
+    # ------------------------------
+    # 🧾 Ara Tabloları Göster (A.5, A.6, A.8)
+    # ------------------------------
+
+    # Table A.5
+    st.subheader("Table A.5 – Normalize Edilmiş Karar Matrisi")
+    norm_df = pd.DataFrame(norm_matrix, columns=criteria, index=alternatives)
+    st.dataframe(norm_df)
+
+    # Table A.6
+    st.subheader("Table A.6 – Ağırlıklı Normalize Karar Matrisi (V)")
+    weighted_df = pd.DataFrame(V, columns=criteria, index=alternatives)
+    st.dataframe(weighted_df)
+
+    # Table A.8
+    st.subheader("Table A.8 – Mesafe Matrisi (D)")
+    distance_df = pd.DataFrame(D, columns=criteria, index=alternatives)
+    st.dataframe(distance_df)
