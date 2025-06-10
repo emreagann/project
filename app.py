@@ -50,10 +50,12 @@ if input_method == "Upload Excel File":
     if uploaded_file:
         df = pd.read_excel(uploaded_file, sheet_name="Alternatives")
         weights_df = pd.read_excel(uploaded_file, sheet_name="Weights")
+        n_dms = st.number_input("Number of Decision Makers", min_value=1, step=1, value=4)
 
 elif input_method == "Manual Entry":
     num_alternatives = st.number_input("Number of Alternatives", min_value=1, step=1)
     num_criteria = st.number_input("Number of Criteria", min_value=1, step=1)
+    n_dms = st.number_input("Number of Decision Makers", min_value=1, step=1, value=1)
 
     criteria_names = [f"C{i+1}" for i in range(num_criteria)]
     weights = [st.number_input(f"Weight for {c}", min_value=0.0, format="%0.3f") for c in criteria_names]
@@ -62,19 +64,18 @@ elif input_method == "Manual Entry":
 
     data = []
     for a in range(num_alternatives):
-        row = []
         st.markdown(f"### Alternative A{a+1}")
-        for c in criteria_names:
-            row.append(st.selectbox(f"A{a+1} - {c}", list(linguistic_vars.keys()), key=f"A{a+1}_{c}"))
-        data.append(row)
+        for d in range(n_dms):
+            row = []
+            st.markdown(f"Decision Maker {d+1}")
+            for c in criteria_names:
+                row.append(st.selectbox(f"A{a+1} - DM{d+1} - {c}", list(linguistic_vars.keys()), key=f"A{a+1}_DM{d+1}_{c}"))
+            data.append([f"A{a+1}"] + row)
 
-    # Repeat each alternative 4 times to simulate 4 DMs
-    df = pd.DataFrame(sum([[alt]*4 for alt in data], []), columns=criteria_names)
-    df.insert(0, "Alternative", sum([[f"A{i+1}"]*4 for i in range(num_alternatives)], []))
+    df = pd.DataFrame(data, columns=["Alternative"] + criteria_names)
 
 if 'df' in locals() and 'weights_df' in locals():
     n_criteria = len(weights_df)
-    n_dms = 4
     n_alternatives = len(df) // n_dms
     criteria_names = weights_df["Criteria No"].tolist()
 
