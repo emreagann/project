@@ -38,14 +38,45 @@ def get_weight_t2nn_from_linguistic(value):
     if pd.isna(value):
         return ((0, 0, 0), (0, 0, 0), (0, 0, 0))
     return weight_linguistic_vars.get(value.strip(), ((0,0,0), (0,0,0), (0,0,0)))
-
 def merge_t2nn_vectors(t2nn_list):
+    # Burada n = 4 olmalı çünkü 4 DM var
     n = len(t2nn_list)
     merged = []
+    
+    # T2NN'leri her bileşen (T, I, F) için topluyoruz
     for i in range(3):  # T, I, F
-        avg = tuple(sum(vec[i][j] for vec in t2nn_list) / n for j in range(3))
-        merged.append(avg)
+        total = tuple(sum(vec[i][j] for vec in t2nn_list) for j in range(3))  # Toplamları al
+        merged.append(total)
+    
     return tuple(merged)
+
+
+# --- Alternatif skorlarını hesapla --- 
+alt_scores = pd.DataFrame(index=alternatives, columns=criteria)
+
+for alt in alternatives:
+    for crit in criteria:
+        t2nns = []
+        
+        # Her DM için T2NN değerlerini alıyoruz
+        for dm in decision_makers:
+            try:
+                val = alt_df.loc[(alt, dm), (crit, dm)]  # Alternatif ve DM'yi kullanarak
+            except KeyError:
+                val = None
+            t2nns.append(get_t2nn_from_linguistic(val))
+        
+        # Tüm DM'lerin T2NN'lerini birleştiriyoruz
+        merged_t2nn = merge_t2nn_vectors(t2nns)  # T2NN'leri topluyoruz
+
+        # Birleştirilmiş T2NN üzerinden skoru hesapla
+        score = score_from_merged_t2nn(merged_t2nn)
+        alt_scores.loc[alt, crit] = round(score, 4)
+
+# Karar matrisini görüntüle
+st.subheader("Ortalama Karar Matrisi (Skorlar)")
+st.dataframe(alt_scores)
+
 
 def t2nn_addition(a, b):
     return tuple(
