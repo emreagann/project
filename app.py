@@ -22,9 +22,11 @@ linguistic_to_t2nn_weights = {
     "VH": ((0.90, 0.85, 0.95), (0.10, 0.15, 0.10), (0.05, 0.05, 0.10))
 }
 
+# Skor fonksiyonu
 def t2nn_score(T, I, F):
     return (1/12) * ((8 + (T[0] + 2*T[1] + T[2]) - (I[0] + 2*I[1] + I[2]) - (F[0] + 2*F[1] + F[2])))
 
+# Normalize
 def normalize(scores, typ):
     scores = np.array(scores)
     if scores.max() == scores.min():
@@ -34,6 +36,7 @@ def normalize(scores, typ):
     else:
         return (scores.max() - scores) / (scores.max() - scores.min())
 
+# MABAC adımları
 def weighted_matrix(norm_matrix, weights):
     return norm_matrix * weights
 
@@ -48,6 +51,7 @@ def distance_matrix_calc(V, B):
 def final_scores(D):
     return np.sum(D, axis=1)
 
+# Streamlit arayüz
 st.title("MABAC Yöntemi – Type-2 Neutrosophic Sayılarla")
 
 uploaded_file = st.file_uploader("Excel dosyasını yükleyin", type=["xlsx"])
@@ -55,11 +59,15 @@ if uploaded_file:
     xls = pd.ExcelFile(uploaded_file)
     data_df = pd.read_excel(xls, sheet_name=0, header=None)
     weight_df = pd.read_excel(xls, sheet_name=1, header=None)
-
+    
     # Kriter adları
     criteria = [f"C{i+1}" for i in range(18)]
 
-    # Alternatif isimlerini ve indekslerini al (başlığı dahil etmeden)
+    # Kriter türlerini (benefit/cost) Excel’den al (ilk satır)
+    raw_types = data_df.iloc[0, 2:2+len(criteria)].tolist()
+    criterion_types = dict(zip(criteria, [str(x).strip().lower() for x in raw_types]))
+
+    # Alternatifleri ve satır başlangıçlarını al
     alternatives = []
     alt_indices = []
     for i, val in enumerate(data_df.iloc[:, 0]):
@@ -69,18 +77,10 @@ if uploaded_file:
                 alternatives.append(name)
                 alt_indices.append(i)
 
-    # Kriter türlerini kullanıcıdan al
-    criterion_types_row = weight_df.iloc[0, 1:1+len(criteria)].tolist()
-    criterion_types = dict(zip(criteria, [x.strip().lower() for x in criterion_types_row]))
-    
-    # Ağırlıkları veri çerçevesinden temizle (ilk satır türdü, onu çıkar)
-    weight_df = weight_df.iloc[1:].reset_index(drop=True)
-
-
-    # Alternatif skor matrisini hesapla
+    # Skor matrisi
     score_matrix = []
     for idx in alt_indices:
-        if idx + 3 >= len(data_df):  # 4 karar verici satırı gerekiyor
+        if idx + 3 >= len(data_df):
             continue
         rows = data_df.iloc[idx:idx+4, 2:]
         scores = []
@@ -103,6 +103,7 @@ if uploaded_file:
 
     score_matrix = np.array(score_matrix)
 
+    # Normalize et
     norm_matrix = []
     for i, c in enumerate(criteria):
         col = score_matrix[:, i]
@@ -110,16 +111,7 @@ if uploaded_file:
         norm_matrix.append(norm)
     norm_matrix = np.array(norm_matrix).T
 
-    # Normalize matrisini göster
-    norm_df = pd.DataFrame(norm_matrix, columns=criteria)
-    norm_df["Alternatif"] = alternatives
-    norm_df = norm_df.set_index("Alternatif")
-
-    st.subheader("Normalize Edilmiş Karar Matrisi")
-    st.dataframe(norm_df)
-
-
-    # Ağırlık skorlarını hesapla
+    # Ağırlıkları hesapla
     weight_scores = []
     for i, c in enumerate(criteria):
         weights = weight_df.iloc[:, i+1].tolist()
@@ -130,20 +122,19 @@ if uploaded_file:
         score = t2nn_score(avg_T, avg_I, avg_F)
         weight_scores.append(score)
 
-    # MABAC adımları
+    # MABAC işlemleri
     V = weighted_matrix(norm_matrix, weight_scores)
     B = border_area_calc(V)
     D = distance_matrix_calc(V, B)
     scores = final_scores(D)
     theta_scores = scores / np.sum(scores)
 
-    # Sonuçları göster
+    # Sonuç tablosu
     result_df = pd.DataFrame({
         "Alternatif": alternatives,
         "Skor": scores.round(4),
         "Normalize Skor": theta_scores.round(4)
-    })
-    result_df = result_df.sort_values(by="Skor", ascending=False)
+    }).sort_values(by="Skor", ascending=False)
 
     st.subheader("Sonuç: Alternatif Sıralaması")
     st.dataframe(result_df.reset_index(drop=True))
