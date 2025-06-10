@@ -32,6 +32,13 @@ def get_valid_numeric_values(value):
 
 # Min-Max Normalizasyonu
 def normalize_data(df, criteria_type):
+    try:
+        # Veri türünün sayısal olup olmadığını kontrol et
+        df = pd.to_numeric(df, errors='coerce')  # Sayısal olmayan verileri NaN yapar
+    except Exception as e:
+        st.error(f"Veri dönüştürme hatası: {e}")
+        return df
+
     if criteria_type == 'benefit':
         return (df - df.min()) / (df.max() - df.min())
     elif criteria_type == 'cost':
