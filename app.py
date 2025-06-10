@@ -30,7 +30,7 @@ def t2nn_score(T, I, F):
 def normalize(scores, typ):
     scores = np.array(scores)
     if scores.max() == scores.min():
-        return np.ones_like(scores)  # Aynı değer varsa hepsi 1 olsun
+        return np.ones_like(scores)
     if typ == "benefit":
         return (scores - scores.min()) / (scores.max() - scores.min())
     else:
@@ -60,41 +60,47 @@ if uploaded_file:
     data_df = pd.read_excel(xls, sheet_name=0, header=None)
     weight_df = pd.read_excel(xls, sheet_name=1, header=None)
 
-    # Kriter adlarını al
     criteria = [f"C{i+1}" for i in range(18)]
 
     # Alternatifleri ve başlangıç satır indekslerini al
-   alternatives = []
-alt_indices = []
+    alternatives = []
+    alt_indices = []
+    for i, val in enumerate(data_df.iloc[:, 0]):
+        if isinstance(val, str) and val.strip().startswith("A"):
+            alternatives.append(val.strip(":"))
+            alt_indices.append(i)
 
-for i, val in enumerate(data_df.iloc[:, 0]):
-    if isinstance(val, str) and val.strip().startswith("A"):
-        alternatives.append(val.strip(":"))
-        alt_indices.append(i)
+    # Kullanıcıdan kriter türlerini al
+    st.subheader("Kriter türlerini belirtin (Benefit / Cost)")
+    criterion_types = {}
+    for c in criteria:
+        criterion_types[c] = st.selectbox(f"{c} türü:", ["benefit", "cost"], key=f"type_{c}")
 
-score_matrix = []
-for idx in alt_indices:
-    if idx + 3 >= len(data_df):  # 4 karar verici varsa 3+1 satır gerekiyor
-        continue
-    rows = data_df.iloc[idx:idx+4, 2:]
-    scores = []
-    for col in rows.columns:
-        terms = rows[col].tolist()
-        t2nn_values = [
-            linguistic_to_t2nn_alternatives.get(str(term).strip())
-            for term in terms
-            if pd.notna(term) and linguistic_to_t2nn_alternatives.get(str(term).strip()) is not None
-        ]
-        if len(t2nn_values) > 0:
-            avg_T = np.mean([x[0] for x in t2nn_values], axis=0)
-            avg_I = np.mean([x[1] for x in t2nn_values], axis=0)
-            avg_F = np.mean([x[2] for x in t2nn_values], axis=0)
-            score = t2nn_score(avg_T, avg_I, avg_F)
-        else:
-            score = 0
-        scores.append(score)
-    score_matrix.append(scores)
+    # Skor matrisini oluştur
+    score_matrix = []
+    for idx in alt_indices:
+        if idx + 3 >= len(data_df):
+            continue
+        rows = data_df.iloc[idx:idx+4, 2:]
+        scores = []
+        for col in rows.columns:
+            terms = rows[col].tolist()
+            t2nn_values = [
+                linguistic_to_t2nn_alternatives.get(str(term).strip())
+                for term in terms
+                if pd.notna(term) and linguistic_to_t2nn_alternatives.get(str(term).strip()) is not None
+            ]
+            if len(t2nn_values) > 0:
+                avg_T = np.mean([x[0] for x in t2nn_values], axis=0)
+                avg_I = np.mean([x[1] for x in t2nn_values], axis=0)
+                avg_F = np.mean([x[2] for x in t2nn_values], axis=0)
+                score = t2nn_score(avg_T, avg_I, avg_F)
+            else:
+                score = 0
+            scores.append(score)
+        score_matrix.append(scores)
 
+    score_matrix = np.array(score_matrix)
 
     # Normalize et
     norm_matrix = []
@@ -104,7 +110,7 @@ for idx in alt_indices:
         norm_matrix.append(norm)
     norm_matrix = np.array(norm_matrix).T
 
-    # Ağırlık skorlarını hesapla
+    # Ağırlıkları hesapla
     weight_scores = []
     for i, c in enumerate(criteria):
         weights = weight_df.iloc[:, i+1].tolist()
@@ -115,7 +121,7 @@ for idx in alt_indices:
         score = t2nn_score(avg_T, avg_I, avg_F)
         weight_scores.append(score)
 
-    # MABAC hesaplamaları
+    # MABAC işlemleri
     V = weighted_matrix(norm_matrix, weight_scores)
     B = border_area_calc(V)
     D = distance_matrix_calc(V, B)
