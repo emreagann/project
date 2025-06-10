@@ -101,13 +101,21 @@ if uploaded_file:
 
     score_matrix = np.array(score_matrix)
 
-    # Normalize et
     norm_matrix = []
     for i, c in enumerate(criteria):
         col = score_matrix[:, i]
         norm = normalize(col, criterion_types[c])
         norm_matrix.append(norm)
     norm_matrix = np.array(norm_matrix).T
+
+    # Normalize matrisini göster
+    norm_df = pd.DataFrame(norm_matrix, columns=criteria)
+    norm_df["Alternatif"] = alternatives
+    norm_df = norm_df.set_index("Alternatif")
+
+    st.subheader("Normalize Edilmiş Karar Matrisi")
+    st.dataframe(norm_df)
+
 
     # Ağırlık skorlarını hesapla
     weight_scores = []
