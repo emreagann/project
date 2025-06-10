@@ -97,23 +97,33 @@ if uploaded_file:
     criteria = alt_df.columns.get_level_values(0).unique()
     decision_makers = alt_df.columns.get_level_values(1).unique()
 
-    alt_scores = pd.DataFrame(index=alternatives, columns=criteria)
+    # --- Alternatif skorlarını hesapla --- 
+alt_scores = pd.DataFrame(index=alternatives, columns=criteria)
 
-    for alt in alternatives:
-        for crit in criteria:
-            t2nns = []
-            for dm in decision_makers:
-                try:
-                    val = alt_df.loc[(alt, dm), (crit, dm)]
-                except KeyError:
-                    val = None
-                t2nns.append(get_t2nn_from_linguistic(val))
-            merged = merge_t2nn_vectors(t2nns)
-            score = score_from_merged_t2nn(merged)
-            alt_scores.loc[alt, crit] = round(score, 4)
+# İlk olarak, her kriter için DM'leri birleştirelim
+for alt in alternatives:
+    for crit in criteria:
+        t2nns = []
+        
+        # Her DM için T2NN değerlerini alıyoruz
+        for dm in decision_makers:
+            try:
+                val = alt_df.loc[(alt, dm), (crit, dm)]
+            except KeyError:
+                val = None
+            t2nns.append(get_t2nn_from_linguistic(val))
+        
+        # DM'lerin T2NN'lerini birleştir
+        merged_t2nn = merge_t2nn_vectors(t2nns)  # T2NN'leri ortalayarak birleştir
 
-    st.subheader("Ortalama Karar Matrisi (Skorlar)")
-    st.dataframe(alt_scores)
+        # Birleştirilmiş T2NN üzerinden skoru hesapla
+        score = score_from_merged_t2nn(merged_t2nn)
+        alt_scores.loc[alt, crit] = round(score, 4)
+
+# Karar matrisini görüntüle
+st.subheader("Ortalama Karar Matrisi (Skorlar)")
+st.dataframe(alt_scores)
+
 
     # --- Ağırlık skorlarını hesapla ---
     weight_scores = pd.Series(index=wt_df.index, dtype=float)
