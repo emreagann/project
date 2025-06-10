@@ -64,44 +64,37 @@ if uploaded_file:
     criteria = [f"C{i+1}" for i in range(18)]
 
     # Alternatifleri ve başlangıç satır indekslerini al
-    alternatives = []
-    alt_indices = []
+   alternatives = []
+alt_indices = []
 
-    for i, val in enumerate(data_df.iloc[:, 0]):
-        if pd.notna(val):
-            alternatives.append(str(val).strip(':'))
-            alt_indices.append(i)
+for i, val in enumerate(data_df.iloc[:, 0]):
+    if isinstance(val, str) and val.strip().startswith("A"):
+        alternatives.append(val.strip(":"))
+        alt_indices.append(i)
 
-    # Kriter türlerini al
-    st.subheader("Kriter türlerini belirtin (Benefit / Cost)")
-    criterion_types = {}
-    for c in criteria:
-        criterion_types[c] = st.selectbox(f"{c} türü:", ["benefit", "cost"], key=f"type_{c}")
+score_matrix = []
+for idx in alt_indices:
+    if idx + 3 >= len(data_df):  # 4 karar verici varsa 3+1 satır gerekiyor
+        continue
+    rows = data_df.iloc[idx:idx+4, 2:]
+    scores = []
+    for col in rows.columns:
+        terms = rows[col].tolist()
+        t2nn_values = [
+            linguistic_to_t2nn_alternatives.get(str(term).strip())
+            for term in terms
+            if pd.notna(term) and linguistic_to_t2nn_alternatives.get(str(term).strip()) is not None
+        ]
+        if len(t2nn_values) > 0:
+            avg_T = np.mean([x[0] for x in t2nn_values], axis=0)
+            avg_I = np.mean([x[1] for x in t2nn_values], axis=0)
+            avg_F = np.mean([x[2] for x in t2nn_values], axis=0)
+            score = t2nn_score(avg_T, avg_I, avg_F)
+        else:
+            score = 0
+        scores.append(score)
+    score_matrix.append(scores)
 
-    # Ortalama skor matrisini oluştur
-    score_matrix = []
-    for alt in alternatives:
-        alt_rows = data_df[data_df.iloc[:, 0] == alt]
-        rows = data_df.loc[alt_rows.index[0]: alt_rows.index[0]+3, 2:]
-        scores = []
-        for col in rows.columns:
-            terms = rows[col].tolist()
-            t2nn_values = [
-                linguistic_to_t2nn_alternatives.get(str(term).strip())
-                for term in terms
-                if pd.notna(term) and linguistic_to_t2nn_alternatives.get(str(term).strip()) is not None
-            ]
-            if len(t2nn_values) > 0:
-                avg_T = np.mean([x[0] for x in t2nn_values], axis=0)
-                avg_I = np.mean([x[1] for x in t2nn_values], axis=0)
-                avg_F = np.mean([x[2] for x in t2nn_values], axis=0)
-                score = t2nn_score(avg_T, avg_I, avg_F)
-            else:
-                score = 0
-            scores.append(score)
-        score_matrix.append(scores)
-
-    score_matrix = np.array(score_matrix)
 
     # Normalize et
     norm_matrix = []
