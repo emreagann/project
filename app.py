@@ -47,6 +47,9 @@ def normalize_data(df, criteria_type):
 
 # Weights ile çarpma
 def apply_weights(normalized_df, weights):
+    if len(weights) != normalized_df.shape[1]:
+        st.error("Ağırlıklar ve kriter sayısı uyuşmuyor!")
+        return normalized_df
     return normalized_df * weights
 
 # BAA Hesaplama
