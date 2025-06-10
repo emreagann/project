@@ -20,12 +20,12 @@ def get_valid_numeric_values(value):
     value = str(value).strip()
     return score_function(linguistic_vars[value]) if value in linguistic_vars else 0
 
-def normalize_data(df, criteria_type):
-    if criteria_type == 'benefit':
-        return (df - df.min()) / (df.max() - df.min())
-    elif criteria_type == 'cost':
-        return (df.max() - df) / (df.max() - df.min())
-    return df
+def normalize_data(series, criteria_type):
+    if criteria_type.lower() == 'benefit':
+        return (series - series.min()) / (series.max() - series.min())
+    elif criteria_type.lower() == 'cost':
+        return (series.max() - series) / (series.max() - series.min())
+    return series
 
 def apply_weights(normalized_df, weights):
     return normalized_df.multiply(weights, axis=1)
@@ -51,21 +51,21 @@ if uploaded_file:
     n_dms = 4
     n_alternatives = len(df) // n_dms
 
-   criteria_names = weights_df["Criteria No"].tolist()  # ['C1', ..., 'C18']
+    criteria_names = weights_df["Criteria No"].tolist()  # ['C1', ..., 'C18']
 
-   final_matrix = pd.DataFrame()
-   alternatives = []
+    final_matrix = pd.DataFrame()
+    alternatives = []
 
     for i in range(n_alternatives):
-        group = df.iloc[i * n_dms:(i + 1) * n_dms][criteria_names]  # Sadece doğru sütunlar
+        group = df.iloc[i * n_dms:(i + 1) * n_dms][criteria_names]
         scored = group.applymap(get_valid_numeric_values)
         avg_scores = scored.mean(axis=0)
         final_matrix.loc[i] = avg_scores
         alt_name = df.iloc[i * n_dms, 0]
         alternatives.append(alt_name.strip() if isinstance(alt_name, str) else f"A{i+1}")
 
-final_matrix.index = alternatives
-final_matrix.columns = criteria_names
+    final_matrix.index = alternatives
+    final_matrix.columns = criteria_names
 
     # Normalizasyon
     normalized_df = pd.DataFrame(index=final_matrix.index)
@@ -84,11 +84,11 @@ final_matrix.columns = criteria_names
         "Alternative": alternatives,
         "MABAC Score": distances,
         "Rank": distances.rank(ascending=False).astype(int)
-    })
+    }).sort_values(by="Rank")
 
     # Sonuçları göster
     st.subheader("Karar Matrisi (Ortalama Skorlar):")
     st.dataframe(final_matrix)
 
     st.subheader("MABAC Skorları ve Sıralama:")
-    st.dataframe(result_df.sort_values(by="Rank"))
+    st.dataframe(result_df)
