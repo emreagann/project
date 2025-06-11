@@ -19,7 +19,15 @@ weight_linguistic_vars = {
     "H":  [(0.80, 0.75, 0.70), (0.20, 0.15, 0.30), (0.15, 0.10, 0.20)],
     "VH": [(0.90, 0.85, 0.95), (0.10, 0.15, 0.10), (0.05, 0.05, 0.10)],
 }
+def calculate_t2nn_values(linguistic_term):
+    # Linguistic term'den α, β, γ değerlerini almak
+    alpha, beta, gamma = linguistic_variables.get(linguistic_term, [(0, 0, 0), (0, 0, 0), (0, 0, 0)])
+    # T2NN değerini döndürmek
+    return {"α (Truth)": alpha, "β (Indeterminacy)": beta, "γ (Falsity)": gamma}
 
+# Test için "Very High (VH)" terimini hesaplama
+t2nn_values_vh = calculate_t2nn_values("VH")
+print("Very High (VH) T2NN Values:", t2nn_values_vh)
 def get_t2nn_from_linguistic(value, is_weight=False):
     if pd.isna(value):
         return ((0, 0, 0), (0, 0, 0), (0, 0, 0))
