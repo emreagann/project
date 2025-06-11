@@ -46,47 +46,21 @@ def score_from_merged_t2nn(t2nn, is_benefit=True):
     score = (1 / 12) * (8 + (a1 + 2*a2 + a3) - (b1 + 2*b2 + b3) - (g1 + 2*g2 + g3))
     return score if is_benefit else -score
 
-def combine_multiple_decision_makers(alt_df, decision_makers, criteria, alternatives, criteria_types):
-    combined_results = {}
-    
-    for alt in alternatives:
-        for crit in criteria:
-            t2nns = []
-            is_benefit = criteria_types[crit] == "Benefit"
-            
-            # Karar vericilerden alınan dilsel verileri T2NN vektörüne dönüştür
-            for dm in decision_makers:
-                try:
-                    val = alt_df.loc[(alt, dm), (crit, dm)]
-                except KeyError:
-                    val = None
-                t2nns.append(get_t2nn_from_linguistic(val))
-            
-            # T2NN vektörlerini birleştir
-            merged_t2nn = merge_t2nn_vectors(t2nns)
-            score = score_from_merged_t2nn(merged_t2nn, is_benefit)
-            combined_results[(alt, crit)] = round(score, 4)
-    
-    return combined_results
-
 def min_max_normalization(df, criteria, criteria_types):
     """Apply min-max normalization to criteria columns."""
     normalized_df = df.copy()
     
-    # Kriterler üzerinden normalizasyon işlemi yapılır
     for crit in criteria:
         if criteria_types[crit] == "Benefit":
             col_max = df[crit].max(skipna=True)
             col_min = df[crit].min(skipna=True)
             normalized_df[crit] = (df[crit] - col_min) / (col_max - col_min) if col_max != col_min else 0
-        
         elif criteria_types[crit] == "Cost":
             col_max = df[crit].max(skipna=True)
             col_min = df[crit].min(skipna=True)
             normalized_df[crit] = (col_max - df[crit]) / (col_max - col_min) if col_max != col_min else 0
     
     return normalized_df
-
 
 def weighted_normalization(normalized_df, weights, criteria):
     """Apply weighted normalization to the decision matrix."""
@@ -162,13 +136,37 @@ if input_type == "Excel":
         for crit in criteria:
             criteria_types[crit] = st.radio(f"Select if {crit} is Benefit or Cost", ("Benefit", "Cost"))
 
-        # Karar vericilerin birleşik sonuçlarını hesapla
-        combined_results = combine_multiple_decision_makers(alt_df, decision_makers, criteria, alternatives, criteria_types)
+        # Normalizasyon ve ağırlıklı normalizasyon
+        normalized_df = min_max_normalization(alt_df, criteria, criteria_types)
+        weighted_df = weighted_normalization(normalized_df, wt_df, criteria)
+
+        # BAA Hesapla
+        baa_values = calculate_baa(weighted_df)
+
+        # Mesafe matrisini hesapla
+        distance_matrix = calculate_distance_matrix(baa_values, weighted_df)
+
+        # MABAC skoru hesapla
+        mabac_scores = calculate_mabac_score(distance_matrix, baa_values)
 
         # Sonuçları görüntüle
-        alt_scores = pd.DataFrame.from_dict(combined_results, orient='index', columns=["Score"])
-        st.subheader("Decision Matrix (Combined Scores)")
-        st.dataframe(alt_scores)
+        st.subheader("Normalized Decision Matrix")
+        st.dataframe(normalized_df)
+
+        st.subheader("Weighted Normalized Matrix")
+        st.dataframe(weighted_df)
+
+        st.subheader("Border Approximation Area (BAA) Values")
+        baa_df = pd.DataFrame(baa_values, index=alternatives, columns=["BAA Value"])
+        st.dataframe(baa_df)
+
+        st.subheader("Distance Matrix")
+        distance_df = pd.DataFrame(distance_matrix, index=alternatives, columns=alternatives)
+        st.dataframe(distance_df)
+
+        st.subheader("MABAC Scores")
+        mabac_results = pd.DataFrame(mabac_scores, index=alternatives, columns=["MABAC Score"])
+        st.dataframe(mabac_results)
 
 elif input_type == "Manual":
     st.subheader("Manual Entry Section for Alternatives and Weights")
