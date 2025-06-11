@@ -48,24 +48,21 @@ def score_from_merged_t2nn(t2nn, is_benefit=True):
 
 def combine_multiple_decision_makers(alt_df, decision_makers, criteria, alternatives, criteria_types):
     combined_results = {}
-
+    
     for alt in alternatives:
         for crit in criteria:
             t2nns = []
-            is_benefit = criteria_types[crit] == "Benefit"  # Kriterin türü (Benefit ya da Cost)
+            is_benefit = criteria_types[crit] == "Benefit"
             
-            # Her karar vericinin değerlendirmesi alınır
+            # Karar vericilerden alınan dilsel verileri T2NN vektörüne dönüştür
             for dm in decision_makers:
                 try:
-                    # Alternatifler ve karar vericiler için dilsel değeri alıyoruz
                     val = alt_df.loc[(alt, dm), (crit, dm)]
                 except KeyError:
                     val = None
-                
-                # T2NN vektörünü hesaplıyoruz
                 t2nns.append(get_t2nn_from_linguistic(val))
             
-            # Karar vericilerin T2NN vektörlerini birleştiriyoruz
+            # T2NN vektörlerini birleştir
             merged_t2nn = merge_t2nn_vectors(t2nns)
             score = score_from_merged_t2nn(merged_t2nn, is_benefit)
             combined_results[(alt, crit)] = round(score, 4)
@@ -76,19 +73,20 @@ def min_max_normalization(df, criteria, criteria_types):
     """Apply min-max normalization to criteria columns."""
     normalized_df = df.copy()
     
+    # Kriterler üzerinden normalizasyon işlemi yapılır
     for crit in criteria:
-        # Kriterin türüne göre normalizasyon yapıyoruz
         if criteria_types[crit] == "Benefit":
-            col_max = df[crit].max(skipna=True)  # NaN değerleri atla
-            col_min = df[crit].min(skipna=True)  # NaN değerleri atla
+            col_max = df[crit].max(skipna=True)
+            col_min = df[crit].min(skipna=True)
             normalized_df[crit] = (df[crit] - col_min) / (col_max - col_min) if col_max != col_min else 0
         
         elif criteria_types[crit] == "Cost":
-            col_max = df[crit].max(skipna=True)  # NaN değerleri atla
-            col_min = df[crit].min(skipna=True)  # NaN değerleri atla
+            col_max = df[crit].max(skipna=True)
+            col_min = df[crit].min(skipna=True)
             normalized_df[crit] = (col_max - df[crit]) / (col_max - col_min) if col_max != col_min else 0
     
     return normalized_df
+
 
 def weighted_normalization(normalized_df, weights, criteria):
     """Apply weighted normalization to the decision matrix."""
