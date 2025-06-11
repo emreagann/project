@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 
-# --- T2NN sözlükleri ---
+# --- T2NN sözlükleri --- (Tablo A.1 ve A.2'den alındı)
 alternative_linguistic_vars = {
     "VB": [0.20, 0.20, 0.10, 0.65, 0.80, 0.85, 0.45, 0.80, 0.70],
     "B":  [0.35, 0.35, 0.10, 0.50, 0.75, 0.80, 0.50, 0.75, 0.65],
@@ -12,11 +12,26 @@ alternative_linguistic_vars = {
     "VG": [0.95, 0.90, 0.95, 0.10, 0.10, 0.05, 0.05, 0.05, 0.05],
 }
 
+weight_linguistic_vars = {
+    "L":  [(0.20, 0.30, 0.20), (0.60, 0.70, 0.80), (0.45, 0.75, 0.75)],
+    "ML": [(0.40, 0.30, 0.25), (0.45, 0.55, 0.40), (0.45, 0.60, 0.55)],
+    "M":  [(0.50, 0.55, 0.55), (0.40, 0.45, 0.55), (0.35, 0.40, 0.35)],
+    "H":  [(0.80, 0.75, 0.70), (0.20, 0.15, 0.30), (0.15, 0.10, 0.20)],
+    "VH": [(0.90, 0.85, 0.95), (0.10, 0.15, 0.10), (0.05, 0.05, 0.10)],
+}
+
 # --- Yardımcı Fonksiyonlar ---
-def get_t2nn_from_linguistic(value):
+def get_t2nn_from_linguistic(value, is_weight=False):
+    """
+    Convert linguistic value to T2NN vector.
+    If is_weight is True, it uses weight_linguistic_vars.
+    """
     if pd.isna(value):
         return ((0, 0, 0), (0, 0, 0), (0, 0, 0))
-    return tuple(tuple(alternative_linguistic_vars.get(value.strip(), [0]*9)[i:i+3]) for i in range(0, 9, 3))
+    if is_weight:
+        return tuple(tuple(weight_linguistic_vars.get(value.strip(), [0]*9)[i:i+3]) for i in range(0, 9, 3))
+    else:
+        return tuple(tuple(alternative_linguistic_vars.get(value.strip(), [0]*9)[i:i+3]) for i in range(0, 9, 3))
 
 def merge_t2nn_vectors(t2nn_list):
     # T2NN'leri birleştirme işlemi: Her bir bileşenin (T, I, F) ortalamasını alır.
