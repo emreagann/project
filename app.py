@@ -42,28 +42,26 @@ def score_from_merged_t2nn(t2nn, is_benefit=True):
     return score if is_benefit else -score
 
 def min_max_normalization(df, criteria, criteria_types):
-    """Apply min-max normalization to criteria columns."""
     normalized_df = df.copy()
 
     for crit in criteria:
-        # Ensure only numeric data is used
         normalized_df[crit] = pd.to_numeric(normalized_df[crit], errors='coerce')
 
-        # Handle NaN values if needed, e.g., replace NaNs with the column mean
         normalized_df[crit].fillna(normalized_df[crit].mean(), inplace=True)
 
-        # Apply min-max normalization based on criteria type
         if criteria_types[crit] == "Benefit":
-            col_max = normalized_df[crit].max(skipna=True) 
+            col_max = normalized_df[crit].max(skipna=True)
             col_min = normalized_df[crit].min(skipna=True) 
             normalized_df[crit] = (normalized_df[crit] - col_min) / (col_max - col_min) if col_max != col_min else 0
 
         elif criteria_types[crit] == "Cost":
-            col_max = normalized_df[crit].max(skipna=True) 
-            col_min = normalized_df[crit].min(skipna=True)  
+            col_max = normalized_df[crit].max(skipna=True)
+            col_min = normalized_df[crit].min(skipna=True)
+            # Handle case when col_max == col_min to avoid division by zero
             normalized_df[crit] = (col_max - normalized_df[crit]) / (col_max - col_min) if col_max != col_min else 0
-
+    
     return normalized_df
+
 
 
 def weighted_normalization(normalized_df, weights, criteria):
