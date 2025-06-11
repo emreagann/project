@@ -21,7 +21,7 @@ weight_linguistic_vars = {
 }
 def calculate_t2nn_values(linguistic_term):
     # Linguistic term'den α, β, γ değerlerini almak
-    alpha, beta, gamma = linguistic_variables.get(linguistic_term, [(0, 0, 0), (0, 0, 0), (0, 0, 0)])
+    alpha, beta, gamma = weight_linguistic_vars.get(linguistic_term, [(0, 0, 0), (0, 0, 0), (0, 0, 0)])
     # T2NN değerini döndürmek
     return {"α (Truth)": alpha, "β (Indeterminacy)": beta, "γ (Falsity)": gamma}
 
