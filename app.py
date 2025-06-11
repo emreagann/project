@@ -47,21 +47,25 @@ def score_from_merged_t2nn(t2nn, is_benefit=True):
     return score if is_benefit else -score
 
 def combine_multiple_decision_makers(alt_df, decision_makers, criteria, alternatives, criteria_types):
-    """Combine decision makers' evaluations and compute the final scores."""
     combined_results = {}
 
     for alt in alternatives:
         for crit in criteria:
             t2nns = []
-            is_benefit = criteria_types[crit] == "Benefit"  # Benefit or Cost
+            is_benefit = criteria_types[crit] == "Benefit"  # Kriterin türü (Benefit ya da Cost)
+            
+            # Her karar vericinin değerlendirmesi alınır
             for dm in decision_makers:
                 try:
+                    # Alternatifler ve karar vericiler için dilsel değeri alıyoruz
                     val = alt_df.loc[(alt, dm), (crit, dm)]
                 except KeyError:
                     val = None
+                
+                # T2NN vektörünü hesaplıyoruz
                 t2nns.append(get_t2nn_from_linguistic(val))
             
-            # Merge T2NN vectors for each decision maker
+            # Karar vericilerin T2NN vektörlerini birleştiriyoruz
             merged_t2nn = merge_t2nn_vectors(t2nns)
             score = score_from_merged_t2nn(merged_t2nn, is_benefit)
             combined_results[(alt, crit)] = round(score, 4)
