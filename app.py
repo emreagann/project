@@ -22,10 +22,7 @@ weight_linguistic_vars = {
 
 # --- Yardımcı Fonksiyonlar ---
 def get_t2nn_from_linguistic(value, is_weight=False):
-    """
-    Convert linguistic value to T2NN vector.
-    If is_weight is True, it uses weight_linguistic_vars.
-    """
+    """Convert linguistic value to T2NN vector."""
     if pd.isna(value):
         return ((0, 0, 0), (0, 0, 0), (0, 0, 0))
     if is_weight:
@@ -34,7 +31,7 @@ def get_t2nn_from_linguistic(value, is_weight=False):
         return tuple(tuple(alternative_linguistic_vars.get(value.strip(), [0]*9)[i:i+3]) for i in range(0, 9, 3))
 
 def merge_t2nn_vectors(t2nn_list):
-    # T2NN'leri birleştirme işlemi: Her bir bileşenin (T, I, F) ortalamasını alır.
+    """Combine multiple T2NN vectors."""
     n = len(t2nn_list)
     merged = []
     for i in range(3):  # T, I, F
@@ -43,32 +40,65 @@ def merge_t2nn_vectors(t2nn_list):
     return tuple(merged)
 
 def score_from_merged_t2nn(t2nn, is_benefit=True):
-    # Skor hesaplama fonksiyonu
+    """Calculate score from merged T2NN vector."""
     (a1, a2, a3), (b1, b2, b3), (g1, g2, g3) = t2nn
     score = (1 / 12) * (8 + (a1 + 2*a2 + a3) - (b1 + 2*b2 + b3) - (g1 + 2*g2 + g3))
     return score if is_benefit else -score
 
-def combine_multiple_decision_makers(alt_df, decision_makers, criteria, alternatives, criteria_types):
-    combined_results = {}
-
-    for alt in alternatives:
-        for crit in criteria:
-            t2nns = []
-            is_benefit = criteria_types[crit] == "Benefit"  # Benefit veya Cost
-            for dm in decision_makers:
-                try:
-                    # Her karar vericinin dilsel değeri T2NN'ye dönüştürülür
-                    val = alt_df.loc[(alt, dm), (crit, dm)]
-                except KeyError:
-                    val = None
-                t2nns.append(get_t2nn_from_linguistic(val))
-            
-            # Karar vericilerin T2NN vektörleri birleştirilir
-            merged_t2nn = merge_t2nn_vectors(t2nns)
-            score = score_from_merged_t2nn(merged_t2nn, is_benefit)
-            combined_results[(alt, crit)] = round(score, 4)
+def min_max_normalization(df, criteria, criteria_types):
+    """Apply min-max normalization to criteria columns."""
+    normalized_df = df.copy()
     
-    return combined_results
+    for crit in criteria:
+        if criteria_types[crit] == "Benefit":
+            col_max = df[crit].max()
+            col_min = df[crit].min()
+            normalized_df[crit] = (df[crit] - col_min) / (col_max - col_min)
+        
+        elif criteria_types[crit] == "Cost":
+            col_max = df[crit].max()
+            col_min = df[crit].min()
+            normalized_df[crit] = (col_max - df[crit]) / (col_max - col_min)
+    
+    return normalized_df
+
+def weighted_normalization(normalized_df, weights, criteria):
+    """Apply weighted normalization to the decision matrix."""
+    weighted_df = normalized_df.copy()
+    for crit in criteria:
+        weighted_df[crit] = normalized_df[crit] * weights[crit]  # Apply weight
+    return weighted_df
+
+def calculate_baa(weighted_df):
+    """Calculate the Border Approximation Area (BAA)."""
+    baa = []
+    for idx, row in weighted_df.iterrows():
+        baa_value = 1
+        for crit in row:
+            baa_value *= crit ** (1 / len(weighted_df.columns))  # Multiply each normalized value
+        baa.append(baa_value)
+    return baa
+
+def calculate_distance_matrix(baa_values, weighted_df):
+    """Calculate the distance matrix between alternatives."""
+    distance_matrix = []
+    for idx, baa_val in enumerate(baa_values):
+        distances = []
+        for row in weighted_df.iterrows():
+            distance = abs(baa_val - row[1].sum())  # Ideal alternative distance
+            distances.append(distance)
+        distance_matrix.append(distances)
+    return distance_matrix
+
+def calculate_mabac_score(distance_matrix, baa_values):
+    """Calculate the MABAC score for each alternative."""
+    mabac_scores = []
+    for i in range(len(distance_matrix)):
+        score = 0
+        for j in range(len(distance_matrix[i])):
+            score += distance_matrix[i][j] * baa_values[j]  # Multiply distance by BAA
+        mabac_scores.append(score)
+    return mabac_scores
 
 # --- Streamlit Arayüzü ---
 st.title("T2NN MABAC Alternatif ve Ağırlık Skorlama")
@@ -106,13 +136,24 @@ if input_type == "Excel":
         for crit in criteria:
             criteria_types[crit] = st.radio(f"Select if {crit} is Benefit or Cost", ("Benefit", "Cost"))
 
-        # Karar vericilerin birleşik sonuçlarını hesapla
-        combined_results = combine_multiple_decision_makers(alt_df, decision_makers, criteria, alternatives, criteria_types)
+        # Normalizasyonu uygula
+        normalized_df = min_max_normalization(alt_df, criteria, criteria_types)
 
-        # Sonuçları görüntüle
-        alt_scores = pd.DataFrame.from_dict(combined_results, orient='index', columns=["Score"])
+        # Ağırlıklı normalizasyonu uygula
+        weighted_df = weighted_normalization(normalized_df, wt_df, criteria)
 
-        st.subheader("Decision Matrix (Combined Scores)")
+        # BAA hesaplamasını yap
+        baa_values = calculate_baa(weighted_df)
+
+        # Mesafe matrisini hesapla
+        distance_matrix = calculate_distance_matrix(baa_values, weighted_df)
+
+        # MABAC skoru hesapla
+        mabac_scores = calculate_mabac_score(distance_matrix, baa_values)
+
+        # Sonuçları göster
+        alt_scores = pd.DataFrame(mabac_scores, index=alternatives, columns=["MABAC Score"])
+        st.subheader("MABAC Scores for Alternatives")
         st.dataframe(alt_scores)
 
 elif input_type == "Manual":
@@ -137,8 +178,14 @@ elif input_type == "Manual":
     manual_df = pd.DataFrame(manual_data)
     manual_df.index = pd.MultiIndex.from_tuples(manual_data.keys(), names=["Alternative", "Criteria", "DM"])
 
-    combined_results = combine_multiple_decision_makers(manual_df, decision_makers, criteria, alternatives, criteria_types)
-    alt_scores = pd.DataFrame.from_dict(combined_results, orient='index', columns=["Score"])
+    # Normalizasyon, ağırlıklı normalizasyon ve skor hesaplamaları
+    normalized_df = min_max_normalization(manual_df, criteria, criteria_types)
+    weighted_df = weighted_normalization(normalized_df, manual_df, criteria)
+    baa_values = calculate_baa(weighted_df)
+    distance_matrix = calculate_distance_matrix(baa_values, weighted_df)
+    mabac_scores = calculate_mabac_score(distance_matrix, baa_values)
 
-    st.subheader("Decision Matrix (Combined Scores)")
+    # Sonuçları göster
+    alt_scores = pd.DataFrame(mabac_scores, index=alternatives, columns=["MABAC Score"])
+    st.subheader("MABAC Scores for Alternatives")
     st.dataframe(alt_scores)
