@@ -166,21 +166,88 @@ elif input_type == "Manual":
     criteria = st.text_input("Enter Criteria (comma separated)").split(",")
     decision_makers = st.text_input("Enter Decision Makers (comma separated)").split(",")
 
+    alternatives = [a.strip() for a in alternatives if a.strip()]
+    criteria = [c.strip() for c in criteria if c.strip()]
+    decision_makers = [d.strip() for d in decision_makers if d.strip()]
+
     criteria_types = {}
     for crit in criteria:
-        criteria_types[crit] = st.radio(f"Select if {crit} is Benefit or Cost", ("Benefit", "Cost"))
+        criteria_types[crit] = st.radio(f"Select if {crit} is Benefit or Cost", ("Benefit", "Cost"), key=crit)
 
+    # Input collection
     manual_data = {}
     for alt in alternatives:
         for crit in criteria:
             for dm in decision_makers:
-                manual_data[(alt.strip(), crit.strip(), dm.strip())] = st.text_input(f"Enter linguistic value for {alt.strip()} under {crit.strip()} by {dm.strip()}", "")
+                key = (alt, crit, dm)
+                manual_data[key] = st.text_input(f"Enter linguistic value for {alt} - {crit} - {dm}", key=str(key))
 
-    manual_df = pd.DataFrame(manual_data)
-    manual_df.index = pd.MultiIndex.from_tuples(manual_data.keys(), names=["Alternative", "Criteria", "DM"])
+    # Create DataFrame
+    manual_df = pd.Series(manual_data).unstack(level=-1)
 
-    combined_results = combine_multiple_decision_makers(manual_df, decision_makers, criteria, alternatives, criteria_types)
-    alt_scores = pd.DataFrame.from_dict(combined_results, orient='index', columns=["Score"])
+    # Get T2NN for all inputs
+    t2nn_data = {}
+    for (alt, crit, dm), value in manual_data.items():
+        t2nn_data.setdefault((alt, crit), []).append(get_t2nn_from_linguistic(value))
 
-    st.subheader("Decision Matrix (Combined Scores)")
-    st.dataframe(alt_scores)
+    # Merge all DMs for each (alternative, criterion)
+    merged_t2nn_data = {}
+    for key, t2nn_list in t2nn_data.items():
+        merged_t2nn_data[key] = merge_t2nn_vectors(t2nn_list)
+
+    # Calculate scores from merged T2NNs
+    scores_data = {}
+    for alt in alternatives:
+        for crit in criteria:
+            key = (alt, crit)
+            score = score_from_merged_t2nn(merged_t2nn_data.get(key), is_benefit=(criteria_types[crit] == "Benefit"))
+            scores_data.setdefault(alt, {})[crit] = score
+
+    alt_scores_df = pd.DataFrame(scores_data).T
+    st.subheader("Decision Matrix (Scores from T2NN)")
+    st.dataframe(alt_scores_df)
+
+    # Weight Inputs (linguistic)
+    st.subheader("Enter Weight Linguistic Terms for Each Criterion")
+    weight_input = {}
+    for crit in criteria:
+        weight_input[crit] = st.selectbox(f"Select weight for {crit}", list(weight_linguistic_vars.keys()), key=f"weight_{crit}")
+
+    # Convert linguistic weights to crisp numeric weights using defuzzification (average of all components)
+    weight_values = {}
+    for crit in criteria:
+        t2nn_weight = get_t2nn_from_linguistic(weight_input[crit], is_weight=True)
+        crisp_weight = np.mean([item for sublist in t2nn_weight for item in sublist])
+        weight_values[crit] = crisp_weight
+
+    st.subheader("Crisp Weights")
+    st.json(weight_values)
+
+    # Normalize
+    normalized_df = min_max_normalization(alt_scores_df, criteria, criteria_types)
+    st.subheader("Normalized Matrix")
+    st.dataframe(normalized_df)
+
+    # Weighted normalization
+    weighted_df = weighted_normalization(normalized_df, weight_values, criteria)
+    st.subheader("Weighted Normalized Matrix")
+    st.dataframe(weighted_df)
+
+    # Calculate BAA
+    baa_values = calculate_baa(weighted_df)
+    baa_df = pd.DataFrame(baa_values, index=alternatives, columns=["BAA Value"])
+    st.subheader("Border Approximation Area (BAA) Values")
+    st.dataframe(baa_df)
+
+    # Distance Matrix
+    distance_matrix = calculate_distance_matrix(baa_values, weighted_df)
+    distance_df = pd.DataFrame(distance_matrix, index=alternatives, columns=alternatives)
+    st.subheader("Distance Matrix")
+    st.dataframe(distance_df)
+
+    # MABAC Score
+    mabac_scores = calculate_mabac_score(distance_matrix, baa_values)
+    mabac_df = pd.DataFrame(mabac_scores, index=alternatives, columns=["MABAC Score"])
+    st.subheader("MABAC Scores")
+    st.dataframe(mabac_df)
+
