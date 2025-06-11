@@ -50,17 +50,20 @@ def min_max_normalization(df, criteria, criteria_types):
     normalized_df = df.copy()
     
     for crit in criteria:
+        # Kriterin türüne göre normalizasyon yapıyoruz
         if criteria_types[crit] == "Benefit":
-            col_max = df[crit].max()
-            col_min = df[crit].min()
-            normalized_df[crit] = (df[crit] - col_min) / (col_max - col_min)
+            # NaN kontrolü yapalım
+            col_max = df[crit].max(skipna=True)  # NaN değerleri atla
+            col_min = df[crit].min(skipna=True)  # NaN değerleri atla
+            normalized_df[crit] = (df[crit] - col_min) / (col_max - col_min) if col_max != col_min else 0
         
         elif criteria_types[crit] == "Cost":
-            col_max = df[crit].max()
-            col_min = df[crit].min()
-            normalized_df[crit] = (col_max - df[crit]) / (col_max - col_min)
+            col_max = df[crit].max(skipna=True)  # NaN değerleri atla
+            col_min = df[crit].min(skipna=True)  # NaN değerleri atla
+            normalized_df[crit] = (col_max - df[crit]) / (col_max - col_min) if col_max != col_min else 0
     
     return normalized_df
+
 
 def weighted_normalization(normalized_df, weights, criteria):
     """Apply weighted normalization to the decision matrix."""
