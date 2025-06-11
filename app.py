@@ -86,7 +86,7 @@ if input_type == "Excel":
         criteria = alt_df.columns.get_level_values(0).unique()
         decision_makers = alt_df.columns.get_level_values(1).unique()
 
-        # Kriterler için benefit/cost seçimi
+        # Kriterler için sadece benefit/cost seçimi yapılır
         criteria_types = {}
         for crit in criteria:
             criteria_types[crit] = st.radio(f"Select if {crit} is Benefit or Cost", ("Benefit", "Cost"))
@@ -107,7 +107,7 @@ elif input_type == "Manual":
     criteria = st.text_input("Enter Criteria (comma separated)").split(",")
     decision_makers = st.text_input("Enter Decision Makers (comma separated)").split(",")
 
-    # Kriterler için benefit/cost seçimi
+    # Kriterler için sadece benefit/cost seçimi yapılır
     criteria_types = {}
     for crit in criteria:
         criteria_types[crit] = st.radio(f"Select if {crit} is Benefit or Cost", ("Benefit", "Cost"))
