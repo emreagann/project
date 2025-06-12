@@ -48,7 +48,36 @@ def linguistic_to_numeric(value, linguistic_vars):
         return [vars[f'alpha{i}'] for i in range(1, 4)], [vars[f'beta{i}'] for i in range(1, 4)], [vars[f'gamma{i}'] for i in range(1, 4)]
     else:
         return [0, 0, 0], [0, 0, 0], [0, 0, 0]
-
+def generate_tif_table(alternatives_df, criteria_names, num_dms):
+    columns = pd.MultiIndex.from_product([
+        criteria_names,
+        ['T', 'I', 'F'],
+        ['α', 'β', 'γ']
+    ], names=['Criteria', 'Type', 'Index'])
+    
+    tif_df = pd.DataFrame(index=range(num_dms), columns=columns)
+    
+    for dm in range(1, num_dms + 1):
+        for crit in criteria_names:
+            for alt_idx, alt_name in enumerate(alternatives_df['Alternatives']):
+                value = alternatives_df.loc[alt_idx, f"{crit}_DM{dm}"]
+                alpha, beta, gamma = linguistic_to_numeric(value, alternative_linguistic_vars)
+                
+                tif_df.loc[dm-1, (crit, 'T', 'α')] = alpha[0]
+                tif_df.loc[dm-1, (crit, 'T', 'β')] = alpha[1]
+                tif_df.loc[dm-1, (crit, 'T', 'γ')] = alpha[2]
+                
+                tif_df.loc[dm-1, (crit, 'I', 'α')] = beta[0]
+                tif_df.loc[dm-1, (crit, 'I', 'β')] = beta[1]
+                tif_df.loc[dm-1, (crit, 'I', 'γ')] = beta[2]
+                
+                tif_df.loc[dm-1, (crit, 'F', 'α')] = gamma[0]
+                tif_df.loc[dm-1, (crit, 'F', 'β')] = gamma[1]
+                tif_df.loc[dm-1, (crit, 'F', 'γ')] = gamma[2]
+    
+    tif_df.index = [f'DM{i+1}' for i in range(num_dms)]
+    
+    return tif_df
 def weight_linguistic_to_numeric(value, weight_linguistic_vars):
     if isinstance(value, str):
         value = value.strip()
@@ -60,6 +89,40 @@ def weight_linguistic_to_numeric(value, weight_linguistic_vars):
         return alpha, beta, gamma
     else:
         return [0, 0, 0], [0, 0, 0], [0, 0, 0]
+def combine_weight_values(weight_values, weight_linguistic_vars):
+    alphas, betas, gammas = [], [], []
+    for val in weight_values:
+        alpha, beta, gamma = weight_linguistic_to_numeric(val, weight_linguistic_vars)
+        alphas.append(alpha)
+        betas.append(beta)
+        gammas.append(gamma)
+    combined_alpha = alphas[0]
+    combined_beta = betas[0]
+    combined_gamma = gammas[0]
+    for i in range(1, len(alphas)):
+        combined_alpha = [
+            combined_alpha[j] + alphas[i][j] - (combined_alpha[j] * alphas[i][j]) for j in range(3)
+        ]
+        combined_beta = [
+            combined_beta[j] * betas[i][j] for j in range(3)
+        ]
+        combined_gamma = [
+            combined_gamma[j] * gammas[i][j] for j in range(3)
+        ]
+    return combined_alpha, combined_beta, combined_gamma
+def get_combined_weights_df(weight_df, weight_linguistic_vars):
+    criteria = [col.strip() for col in weight_df.columns if col not in ['Decision Makers'] and not col.startswith('Unnamed')]
+    combined_weights = {}
+    
+    for crit in criteria:
+        values = weight_df[crit].tolist()
+        combined_alpha, combined_beta, combined_gamma = combine_weight_values(values, weight_linguistic_vars)
+        combined_weights[crit] = {
+            'alpha': combined_alpha,
+            'beta': combined_beta,
+            'gamma': combined_gamma
+        }
+    return combined_weights
 
 def combine_alternativevalues(row, num_criteria):
     combined_values = {}
@@ -159,9 +222,6 @@ def get_combined_weights_df(weight_df, weight_linguistic_vars):
     return combined_weights
 
 def normalize_decision_matrix(data, criteria_types):
-    """
-    Normalize the decision matrix based on the 'Benefit' or 'Cost' criteria type.
-    """
     normalized_matrix = np.zeros_like(data, dtype=float)
     for j, crit in enumerate(criteria_types):
         if criteria_types[crit] == 'Benefit':
@@ -181,7 +241,15 @@ def weighted_decision_matrix(normalized_matrix, combined_weights, criteria):
 
 
 def border_approximation_area(weighted_matrix):
-    baa = np.prod(weighted_matrix, axis=0) ** (1.0 / len(weighted_matrix))
+    m = len(weighted_matrix) 
+    baa = []
+    
+    for j in range(weighted_matrix.shape[1]): 
+        product = 1
+        for i in range(m): 
+            product *= weighted_matrix[i, j]
+        baa.append(product ** (1/m))  
+    
     return baa
 
 
@@ -203,6 +271,10 @@ def mabac(alternatives_df, combined_weights, criteria_types, num_criteria):
     m = len(alternatives)
     n = len(criteria)
 
+    st.write("### T-I-F (Truth-Indeterminacy-Falsity) Values")
+    tif_df = generate_tif_table(alternatives_df, criteria, 4)  
+    st.dataframe(tif_df.style.format("{:.2f}"))
+
     data = []
     for idx, row in alternatives_df.iterrows():
         row_data = []
@@ -215,38 +287,27 @@ def mabac(alternatives_df, combined_weights, criteria_types, num_criteria):
 
     st.write("### Step 1: Normalize the Decision Matrix")
     normalized_matrix = normalize_decision_matrix(data, criteria_types)
-    normalized_df = pd.DataFrame(normalized_matrix, 
-                               index=alternatives, 
-                               columns=criteria)
+    normalized_df = pd.DataFrame(normalized_matrix, index=alternatives, columns=criteria)
     st.dataframe(normalized_df)
     
     st.write("### Step 2: Weighted Decision Matrix")
     weighted_matrix = weighted_decision_matrix(normalized_matrix, combined_weights, criteria)
-    weighted_df = pd.DataFrame(weighted_matrix, 
-                             index=alternatives, 
-                             columns=criteria)
+    weighted_df = pd.DataFrame(weighted_matrix, index=alternatives, columns=criteria)
     st.dataframe(weighted_df)
     
     st.write("### Step 3: Border Approximation Area (BAA)")
     baa = border_approximation_area(weighted_matrix)
-    baa_df = pd.DataFrame([baa], 
-                         columns=criteria, 
-                         index=['BAA'])
+    baa_df = pd.DataFrame([baa], columns=criteria, index=['BAA'])
     st.dataframe(baa_df)
     
     st.write("### Step 4: Distance Matrix")
     dist_matrix = distance_matrix(weighted_matrix, baa)
-    dist_df = pd.DataFrame(dist_matrix, 
-                          index=alternatives, 
-                          columns=criteria)
+    dist_df = pd.DataFrame(dist_matrix, index=alternatives, columns=criteria)
     st.dataframe(dist_df)
     
     st.write("### Step 5: MABAC Scores")
     scores = mabac_score(dist_matrix)
-    result_df = pd.DataFrame({
-        'Alternative': alternatives,
-        'Score': scores
-    })
+    result_df = pd.DataFrame({'Alternative': alternatives, 'Score': scores})
     result_df = result_df.sort_values(by='Score', ascending=False).reset_index(drop=True)
     result_df['Rank'] = result_df.index + 1
     st.dataframe(result_df)
@@ -373,7 +434,4 @@ else:
         
         st.write("### Alternatives Score")
         results = mabac(alternatives_df, combined_weights, criteria_types, num_criteria)
-
-  
-
 
