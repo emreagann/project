@@ -96,20 +96,27 @@ def combine_weight_values(weight_values, weight_linguistic_vars):
         alphas.append(alpha)
         betas.append(beta)
         gammas.append(gamma)
+    
     combined_alpha = alphas[0]
-    combined_beta = betas[0]
-    combined_gamma = gammas[0]
     for i in range(1, len(alphas)):
         combined_alpha = [
-            combined_alpha[j] + alphas[i][j] - (combined_alpha[j] * alphas[i][j]) for j in range(3)
+            combined_alpha[j] + alphas[i][j] - (np.prod([a[j] for a in alphas])) for j in range(3)
         ]
+
+    combined_beta = betas[0]
+    for i in range(1, len(betas)):
         combined_beta = [
             combined_beta[j] * betas[i][j] for j in range(3)
         ]
+        
+    combined_gamma = gammas[0]
+    for i in range(1, len(gammas)):
         combined_gamma = [
             combined_gamma[j] * gammas[i][j] for j in range(3)
         ]
+    
     return combined_alpha, combined_beta, combined_gamma
+
 def get_combined_weights_df(weight_df, weight_linguistic_vars):
     criteria = [col.strip() for col in weight_df.columns if col not in ['Decision Makers'] and not col.startswith('Unnamed')]
     combined_weights = {}
@@ -149,17 +156,19 @@ def combine_alternativevalues(row, num_criteria):
     return combined_values
 
 
-def calculate_score(values):
+def calculate_score(values, num_criteria):
     alpha_sum = 0
     beta_sum = 0
     gamma_sum = 0
+    
     for i in range(1, num_criteria + 1):
         alpha_sum += values[f'alpha1_combined_DM{i}'] + 2 * values[f'alpha2_combined_DM{i}'] + values[f'alpha3_combined_DM{i}']
         beta_sum += values[f'beta1_combined_DM{i}'] + 2 * values[f'beta2_combined_DM{i}'] + values[f'beta3_combined_DM{i}']
         gamma_sum += values[f'gamma1_combined_DM{i}'] + 2 * values[f'gamma2_combined_DM{i}'] + values[f'gamma3_combined_DM{i}']
     
-    score = (1 / (12 * num_criteria)) * (8 + alpha_sum - beta_sum + gamma_sum)
+    score = (1 / 12) * (8 + alpha_sum - beta_sum - gamma_sum)
     return score
+
 
 
 def calculate_alternative_scores(alternatives_df):
@@ -434,4 +443,3 @@ else:
         
         st.write("### Alternatives Score")
         results = mabac(alternatives_df, combined_weights, criteria_types, num_criteria)
-
