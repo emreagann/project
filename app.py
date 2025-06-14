@@ -461,7 +461,7 @@ else:
         
         weights_data.append(dm_data)
     
-      if st.button("Calculate", key="calculate_button"):
+    if st.button("Calculate", key="calculate_button"):
         alternatives_df = pd.DataFrame(alternatives_data)
         weights_df = pd.DataFrame(weights_data)
         combined_weights = get_numeric_weight_scores(weights_df, weight_linguistic_vars)
