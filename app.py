@@ -287,19 +287,19 @@ def mabac(alternatives_df, combined_weights, criteria_types, num_criteria,num_dm
     st.write("### T-I-F (Truth-Indeterminacy-Falsity) Values")
     tif_df = generate_tif_table(alternatives_df, criteria,num_dms)  
     st.dataframe(tif_df.style.format("{:.2f}"))
-    st.subheader("🎯Criteria Weights")
+    st.subheader("Criteria Weights")
     for crit, val in combined_weights.items():
         st.write(f"{crit}: {val:.4f}")
 
     data = []
-    st.subheader("📊 Raw Alternative Scores")
+    st.subheader("Raw Alternative Scores")
     for idx, row in alternatives_df.iterrows():
         combined_values = combine_alternativevalues_full(row, criteria, 4)
         row_data = []
         for crit in criteria:
             single_crit = {crit: combined_values[crit]}
             score = calculate_score_from_combined(single_crit)
-            st.write(f"🔢 {alternatives[idx]} / {crit} skoru: {score:.4f}")
+            st.write(f"{alternatives[idx]} / {crit}: {score:.4f}")
             row_data.append(score)
         data.append(row_data)
     data = np.array(data)
