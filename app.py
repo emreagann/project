@@ -461,10 +461,17 @@ else:
         
         weights_data.append(dm_data)
     
-   if st.button("Calculate", key="calculate_button"):
-    alternatives_df = pd.DataFrame(alternatives_data)
-    weights_df = pd.DataFrame(weights_data)
-    combined_weights = get_numeric_weight_scores(weights_df, weight_linguistic_vars)
+      if st.button("Calculate", key="calculate_button"):
+        alternatives_df = pd.DataFrame(alternatives_data)
+        weights_df = pd.DataFrame(weights_data)
+        combined_weights = get_numeric_weight_scores(weights_df, weight_linguistic_vars)
 
-    st.write("### Alternatives Score")
-    results = mabac(alternatives_df, combined_weights, criteria_types, num_criteria, num_dms, criteria_names)
+        st.write("### Alternatives Score")
+        results = mabac(
+            alternatives_df,
+            combined_weights,
+            criteria_types,
+            num_criteria,
+            num_dms,
+            criteria_names
+        )
