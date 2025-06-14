@@ -45,7 +45,7 @@ def linguistic_to_numeric(value, linguistic_vars):
         value = value.strip()
     vars = linguistic_vars.get(value, None)
     if vars:
-        return [vars[f'alpha{i}'] for i in range(1, 4)], [vars[f'beta{i}'] for i in range(1, 4)], [vars[f'gamma{i}'] for i in range(1, 4)]
+        return [vars[f'alpha{i}'] for i in range(1, num_dms)], [vars[f'beta{i}'] for i in range(1, num_dms)], [vars[f'gamma{i}'] for i in range(1, num_dms)]
     else:
         return [0, 0, 0], [0, 0, 0], [0, 0, 0]
 def generate_tif_table(alternatives_df, criteria_names, num_dms):
