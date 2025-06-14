@@ -299,7 +299,7 @@ def mabac(alternatives_df, combined_weights, criteria_types, num_criteria, num_d
         row_data = []
         for crit in criteria:
             if crit not in combined_values:
-                st.warning(f"{alternatives[idx]} / {crit} için değer bulunamadı.")
+                st.warning(f"{alternatives[idx]} / {crit} not founded.")
                 row_data.append(0)
                 continue
             single_crit = {crit: combined_values[crit]}
