@@ -89,96 +89,137 @@ def weight_linguistic_to_numeric(value, weight_linguistic_vars):
         return alpha, beta, gamma
     else:
         return [0, 0, 0], [0, 0, 0], [0, 0, 0]
-def combine_weight_values(weight_values, weight_linguistic_vars):
-    alphas, betas, gammas = [], [], []
-    for val in weight_values:
-        alpha, beta, gamma = weight_linguistic_to_numeric(val, weight_linguistic_vars)
-        alphas.append(alpha)
-        betas.append(beta)
-        gammas.append(gamma)
-    
-    combined_alpha = alphas[0]
-    for i in range(1, len(alphas)):
-        combined_alpha = [
-            combined_alpha[j] + alphas[i][j] - (np.prod([a[j] for a in alphas])) for j in range(3)
-        ]
-
-    combined_beta = betas[0]
-    for i in range(1, len(betas)):
-        combined_beta = [
-            combined_beta[j] * betas[i][j] for j in range(3)
-        ]
-        
-    combined_gamma = gammas[0]
-    for i in range(1, len(gammas)):
-        combined_gamma = [
-            combined_gamma[j] * gammas[i][j] for j in range(3)
-        ]
-    
-    return combined_alpha, combined_beta, combined_gamma
-
-def get_combined_weights_df(weight_df, weight_linguistic_vars):
+def get_numeric_weight_scores(weight_df, weight_linguistic_vars):
     criteria = [col.strip() for col in weight_df.columns if col not in ['Decision Makers'] and not col.startswith('Unnamed')]
-    combined_weights = {}
-    
+    weight_scores = {}
+
     for crit in criteria:
         values = weight_df[crit].tolist()
-        combined_alpha, combined_beta, combined_gamma = combine_weight_values(values, weight_linguistic_vars)
-        combined_weights[crit] = {
-            'alpha': combined_alpha,
-            'beta': combined_beta,
-            'gamma': combined_gamma
-        }
-    return combined_weights
+        vectors = []
 
-def combine_alternativevalues(row, num_criteria):
-    combined_values = {}
-    for i in range(1, num_criteria + 1):
-        for j in range(1, 5):
-            value_c1 = row[f'C{i}_DM{j}']  
-            value_c2 = row[f'C{i+1}_DM{j}']  
-            
-            alpha_c1, beta_c1, gamma_c1 = linguistic_to_numeric(value_c1, alternative_linguistic_vars)
-            alpha_c2, beta_c2, gamma_c2 = linguistic_to_numeric(value_c2, alternative_linguistic_vars)
-            
-            combined_values[f'alpha1_combined_DM{i}_DM{j}'] = alpha_c1[0] + alpha_c2[0] - (alpha_c1[0] * alpha_c2[0])
-            combined_values[f'alpha2_combined_DM{i}_DM{j}'] = alpha_c1[1] + alpha_c2[1] - (alpha_c1[1] * alpha_c2[1])
-            combined_values[f'alpha3_combined_DM{i}_DM{j}'] = alpha_c1[2] + alpha_c2[2] - (alpha_c1[2] * alpha_c2[2])
-            
-            combined_values[f'beta1_combined_DM{i}_DM{j}'] = beta_c1[0] * beta_c2[0]
-            combined_values[f'beta2_combined_DM{i}_DM{j}'] = beta_c1[1] * beta_c2[1]
-            combined_values[f'beta3_combined_DM{i}_DM{j}'] = beta_c1[2] * beta_c2[2]
-            
-            combined_values[f'gamma1_combined_DM{i}_DM{j}'] = gamma_c1[0] * gamma_c2[0]
-            combined_values[f'gamma2_combined_DM{i}_DM{j}'] = gamma_c1[1] * gamma_c2[1]
-            combined_values[f'gamma3_combined_DM{i}_DM{j}'] = gamma_c1[2] * gamma_c2[2]
+        for val in values:
+            if pd.isna(val):
+                continue
+            val_clean = str(val).strip()
+            if val_clean not in weight_linguistic_vars:
+                continue
+            alpha = weight_linguistic_vars[val_clean]['alpha']
+            beta = weight_linguistic_vars[val_clean]['beta']
+            gamma = weight_linguistic_vars[val_clean]['gamma']
+            t2nn = {
+                "T_alpha": alpha[0], "T_beta": alpha[1], "T_gamma": alpha[2],
+                "I_alpha": beta[0], "I_beta": beta[1], "I_gamma": beta[2],
+                "F_alpha": gamma[0], "F_beta": gamma[1], "F_gamma": gamma[2]
+            }
+            vectors.append(t2nn)
+
+        if vectors:
+            combined = combine_multiple_t2nn(vectors)
+            T = combined['T_alpha'] + 2 * combined['T_beta'] + combined['T_gamma']
+            I = combined['I_alpha'] + 2 * combined['I_beta'] + combined['I_gamma']
+            F = combined['F_alpha'] + 2 * combined['F_beta'] + combined['F_gamma']
+            score = (1 / 12) * (8 + T - I - F)
+            weight_scores[crit] = round(score, 4)
+        else:
+            weight_scores[crit] = 0
+
+    return weight_scores
+def normalize_weights(weight_scores):
+    total = sum(weight_scores.values())
+    if total == 0:
+        return {k: 0 for k in weight_scores}
+    return {k: v / total for k, v in weight_scores.items()}
+
+
     
-    return combined_values
+def combine_alternativevalues_full(row, criteria, num_dms):
+    combined_t2nn_per_criterion = {}
+
+    for crit in criteria:
+        t2nn_list = []
+
+        for dm in range(1, num_dms + 1):
+            key = f"{crit}_DM{dm}"
+            value = row.get(key, None)
+
+            if value is None or pd.isna(value):
+                continue
+
+            alpha, beta, gamma = linguistic_to_numeric(value, alternative_linguistic_vars)
+
+            t2nn = {
+                "T_alpha": alpha[0],
+                "T_beta": alpha[1],
+                "T_gamma": alpha[2],
+                "I_alpha": beta[0],
+                "I_beta": beta[1],
+                "I_gamma": beta[2],
+                "F_alpha": gamma[0],
+                "F_beta": gamma[1],
+                "F_gamma": gamma[2]
+            }
+            t2nn_list.append(t2nn)
+
+        if t2nn_list:
+            combined = combine_multiple_t2nn(t2nn_list)
+            combined_t2nn_per_criterion[crit] = combined
+        else:
+            st.warning(f"❗ {row['Alternatives']} için {crit} kriterinde hiçbir DM değeri girilmemiş!")
+
+    return combined_t2nn_per_criterion
 
 
-def calculate_score(values, num_criteria):
-    alpha_sum = 0
-    beta_sum = 0
-    gamma_sum = 0
-    
-    for i in range(1, num_criteria + 1):
-        alpha_sum += values[f'alpha1_combined_DM{i}'] + 2 * values[f'alpha2_combined_DM{i}'] + values[f'alpha3_combined_DM{i}']
-        beta_sum += values[f'beta1_combined_DM{i}'] + 2 * values[f'beta2_combined_DM{i}'] + values[f'beta3_combined_DM{i}']
-        gamma_sum += values[f'gamma1_combined_DM{i}'] + 2 * values[f'gamma2_combined_DM{i}'] + values[f'gamma3_combined_DM{i}']
-    
-    score = (1 / 12) * (8 + alpha_sum - beta_sum - gamma_sum)
-    return score
+def combine_two_t2nn(t1, t2):
+    result = {}
+
+    # T bileşeni (Truth)
+    result["T_alpha"] = t1["T_alpha"] + t2["T_alpha"] - (t1["T_alpha"] * t2["T_alpha"])
+    result["T_beta"] = t1["T_beta"] * t2["T_beta"]
+    result["T_gamma"] = t1["T_gamma"] * t2["T_gamma"]
+
+    # I bileşeni (Indeterminacy)
+    result["I_alpha"] = t1["I_alpha"] * t2["I_alpha"]
+    result["I_beta"] = t1["I_beta"] * t2["I_beta"]
+    result["I_gamma"] = t1["I_gamma"] * t2["I_gamma"]
+
+    # F bileşeni (Falsity)
+    result["F_alpha"] = t1["F_alpha"] * t2["F_alpha"]
+    result["F_beta"] = t1["F_beta"] * t2["F_beta"]
+    result["F_gamma"] = t1["F_gamma"] * t2["F_gamma"]
+
+    return result
+
+
+def combine_multiple_t2nn(vectors):
+    combined = vectors[0]
+    for vec in vectors[1:]:
+        combined = combine_two_t2nn(combined, vec)
+    return combined
+
+def calculate_score_from_combined(combined_t2nn_per_criterion):
+    total_score = 0
+    num_criteria = len(combined_t2nn_per_criterion)
+
+    for crit, values in combined_t2nn_per_criterion.items():
+        T = values['T_alpha'] + 2 * values['T_beta'] + values['T_gamma']
+        I = values['I_alpha'] + 2 * values['I_beta'] + values['I_gamma']
+        F = values['F_alpha'] + 2 * values['F_beta'] + values['F_gamma']
+        score = (1 / 12) * (8 + T - I - F)
+        total_score += score
+
+    return total_score / num_criteria if num_criteria > 0 else 0
 
 
 
-def calculate_alternative_scores(alternatives_df):
+def calculate_alternative_scores(alternatives_df, criteria, num_dms):
     scores = []
     for index, row in alternatives_df.iterrows():
         alternative = row['Alternatives']
-        combined_values = combine_alternativevalues(row)
-        score = calculate_score(combined_values)
+        combined_values = combine_alternativevalues_full(row, criteria, num_dms)
+        score = calculate_score_from_combined(combined_values)
         scores.append({'Alternative': alternative, 'Score': score})
     return pd.DataFrame(scores)
+
 
 def transform_alternatives_df(df, num_criteria):
     df = df[['Alternatives', 'Decision Makers'] + [f'C{i}' for i in range(1, num_criteria + 1)]]
@@ -195,70 +236,44 @@ def transform_alternatives_df(df, num_criteria):
     return pd.DataFrame(result.values())
 
 
-def combine_weight_values(weight_values, weight_linguistic_vars):
-    alphas, betas, gammas = [], [], []
-    for val in weight_values:
-        alpha, beta, gamma = weight_linguistic_to_numeric(val, weight_linguistic_vars)
-        alphas.append(alpha)
-        betas.append(beta)
-        gammas.append(gamma)
-    combined_alpha = alphas[0]
-    combined_beta = betas[0]
-    combined_gamma = gammas[0]
-    for i in range(1, len(alphas)):
-        combined_alpha = [
-            combined_alpha[j] + alphas[i][j] - (combined_alpha[j] * alphas[i][j]) for j in range(3)
-        ]
-        combined_beta = [
-            combined_beta[j] * betas[i][j] for j in range(3)
-        ]
-        combined_gamma = [
-            combined_gamma[j] * gammas[i][j] for j in range(3)
-        ]
-    return combined_alpha, combined_beta, combined_gamma
 
-def get_combined_weights_df(weight_df, weight_linguistic_vars):
-    criteria = [col.strip() for col in weight_df.columns if col not in ['Decision Makers'] and not col.startswith('Unnamed')]
-    combined_weights = {}
-    for crit in criteria:
-        values = weight_df[crit].tolist()
-        combined_alpha, combined_beta, combined_gamma = combine_weight_values(values, weight_linguistic_vars)
-        combined_weights[crit] = {
-            'alpha': combined_alpha,
-            'beta': combined_beta,
-            'gamma': combined_gamma
-        }
-    return combined_weights
+
 
 def normalize_decision_matrix(data, criteria_types):
     normalized_matrix = np.zeros_like(data, dtype=float)
     for j, crit in enumerate(criteria_types):
+        col = data[:, j]
+        min_val = col.min()
+        max_val = col.max()
         if criteria_types[crit] == 'Benefit':
-            normalized_matrix[:, j] = (data[:, j] - data[:, j].min()) / (data[:, j].max() - data[:, j].min())
-        else: 
-            normalized_matrix[:, j] = (data[:, j].max() - data[:, j]) / (data[:, j].max() - data[:, j].min())
+            normalized_matrix[:, j] = (col - min_val) / (max_val - min_val)
+        else:
+            normalized_matrix[:, j] = (max_val - col) / (max_val - min_val)
     return normalized_matrix
 
 
-def weighted_decision_matrix(normalized_matrix, combined_weights, criteria):
+
+def weighted_decision_matrix(normalized_matrix, weight_scores, criteria):
     weighted_matrix = np.zeros_like(normalized_matrix, dtype=float)
     for i, alt in enumerate(normalized_matrix):
         for j, crit in enumerate(criteria):
-            weight = np.mean(combined_weights[crit]['alpha']) + np.mean(combined_weights[crit]['beta']) + np.mean(combined_weights[crit]['gamma'])
+            weight = weight_scores[crit]  # artık sadece tek skor
             weighted_matrix[i, j] = normalized_matrix[i, j] * weight
     return weighted_matrix
+
 
 
 def border_approximation_area(weighted_matrix):
     m = len(weighted_matrix) 
     baa = []
+    epsilon = 1e-10  # Small value to avoid zeros
     
     for j in range(weighted_matrix.shape[1]): 
         product = 1
         for i in range(m): 
-            product *= weighted_matrix[i, j]
+            # Add epsilon to avoid zeros
+            product *= (weighted_matrix[i, j] + epsilon)
         baa.append(product ** (1/m))  
-    
     return baa
 
 
@@ -274,46 +289,65 @@ def mabac_score(distance_matrix):
     return scores
 
 
-def mabac(alternatives_df, combined_weights, criteria_types, num_criteria):
+def mabac(alternatives_df, combined_weights, criteria_types, num_dms):
     alternatives = alternatives_df['Alternatives'].tolist()
-    criteria = [f'C{i}' for i in range(1, num_criteria + 1)]
-    m = len(alternatives)
-    n = len(criteria)
+    criteria = list(criteria_types.keys())
+    num_criteria = len(criteria)
 
     st.write("### T-I-F (Truth-Indeterminacy-Falsity) Values")
-    tif_df = generate_tif_table(alternatives_df, criteria, 4)  
+    tif_df = generate_tif_table(alternatives_df, criteria, num_dms)
     st.dataframe(tif_df.style.format("{:.2f}"))
 
+    st.subheader("🎯 Kriter Ağırlıkları (Skor Formatında)")
+    for crit, val in combined_weights.items():
+        st.write(f"{crit}: {val:.4f}")
+
     data = []
+    st.subheader("📊 Ham skor matrisi")
+
     for idx, row in alternatives_df.iterrows():
+        alternative_name = row['Alternatives']
+        combined_values = combine_alternativevalues_full(row, criteria, num_dms)
+
         row_data = []
         for crit in criteria:
-            vals = [row.get(f'{crit}_DM{dm}', None) for dm in range(1, 5)]
-            numeric_vals = [linguistic_to_numeric(v, alternative_linguistic_vars)[0][0] for v in vals if v is not None]
-            row_data.append(np.mean(numeric_vals))
-        data.append(row_data)
-    data = np.array(data)
+            if crit not in combined_values:
+                st.warning(f"❗ {alternative_name} için {crit} skor üretilemedi!")
+                row_data.append(0)  # veya None yerine 0 kullan
+                continue
 
+            score = calculate_score_from_combined({crit: combined_values[crit]})
+            st.write(f"🔢 {alternative_name} / {crit} skoru: {score:.4f}")
+            row_data.append(score)
+
+        data.append(row_data)
+
+    data = np.array(data)
     st.write("### Step 1: Normalize the Decision Matrix")
     normalized_matrix = normalize_decision_matrix(data, criteria_types)
     normalized_df = pd.DataFrame(normalized_matrix, index=alternatives, columns=criteria)
     st.dataframe(normalized_df)
-    
+
+    st.subheader("📐 Normalize Edilmiş Ağırlıklar")
+    combined_weights = normalize_weights(combined_weights)
+    for crit, val in combined_weights.items():
+        st.write(f"{crit}: {val:.4f}")
+
     st.write("### Step 2: Weighted Decision Matrix")
     weighted_matrix = weighted_decision_matrix(normalized_matrix, combined_weights, criteria)
     weighted_df = pd.DataFrame(weighted_matrix, index=alternatives, columns=criteria)
     st.dataframe(weighted_df)
-    
+
     st.write("### Step 3: Border Approximation Area (BAA)")
     baa = border_approximation_area(weighted_matrix)
     baa_df = pd.DataFrame([baa], columns=criteria, index=['BAA'])
     st.dataframe(baa_df)
-    
+
     st.write("### Step 4: Distance Matrix")
     dist_matrix = distance_matrix(weighted_matrix, baa)
     dist_df = pd.DataFrame(dist_matrix, index=alternatives, columns=criteria)
     st.dataframe(dist_df)
-    
+
     st.write("### Step 5: MABAC Scores")
     scores = mabac_score(dist_matrix)
     result_df = pd.DataFrame({'Alternative': alternatives, 'Score': scores})
@@ -352,7 +386,7 @@ if input_method == "Upload your Excel File":
                     options=["Benefit", "Cost"],
                     key=unique_key
                 )
-            combined_weights = get_combined_weights_df(weights_df, weight_linguistic_vars)
+            combined_weights = get_numeric_weight_scores(weights_df, weight_linguistic_vars)
         elif 'Criteria Weights' in df:
             weights_df = df['Criteria Weights']
             criteria = [col.strip() for col in weights_df.columns if col not in ['Decision Makers'] and not col.startswith('Unnamed')]
@@ -365,81 +399,81 @@ if input_method == "Upload your Excel File":
                     options=["Benefit", "Cost"],
                     key=unique_key
                 )
-            combined_weights = get_combined_weights_df(weights_df, weight_linguistic_vars)
+            combined_weights = get_numeric_weight_scores(weights_df, weight_linguistic_vars)
         
         st.write("Results")
         results = mabac(alternatives_df, combined_weights, criteria_types, num_criteria)
 
 else:
-    st.subheader("Manual Data Enterence")
-    
-    num_alternatives = st.number_input("Alternative Number:", min_value=2, value=3, key="num_alternatives")
-    
-    num_criteria = st.number_input("Criteria Number:", min_value=2, value=2, key="num_criteria")
-    
-    num_dms = st.number_input("Decision Maker Number:", min_value=1, value=4, key="num_dms")
-    
-    st.subheader("Alternative Names")
-    alternative_names = []
-    for i in range(num_alternatives):
-        name = st.text_input(f"Alternative {i+1} Name:", key=f"alt_name_{i}")
-        alternative_names.append(name)
-    
+   st.subheader("Manual Data Enterence")
 
-    st.subheader("Criteria Names")
-    criteria_names = []
-    criteria_types = {}
-   
+num_alternatives = st.number_input("Alternative Number:", min_value=2, value=3, key="num_alternatives")
+num_criteria = st.number_input("Criteria Number:", min_value=2, value=2, key="num_criteria")
+num_dms = st.number_input("Decision Maker Number:", min_value=1, value=4, key="num_dms")
 
-    for i in range(num_criteria):
-        name = st.text_input(f"Criteria {i+1} Name:", key=f"crit_name_{i}")
-        criteria_names.append(name)
-        criteria_types[name] = st.selectbox(
-            f"Criteria {i+1} Type:",
-            options=["Benefit", "Cost"],
-            key=f"crit_type_{i}"
-        )
-    
-    st.subheader("Alternative Evaulation")
-    alternatives_data = []
-    
-    for alt_idx, alt_name in enumerate(alternative_names):
-        st.write(f"### {alt_name} Evaulation")
-        alt_data = {"Alternatives": alt_name}
-        
-        for crit_idx, crit_name in enumerate(criteria_names):
-            for dm in range(1, num_dms + 1):
-                value = st.selectbox(
-                    f"{crit_name} - DM{dm} Evaulation:",
-                    options=list(alternative_linguistic_vars.keys()),
-                    key=f"eval_alt_{alt_idx}_crit_{crit_idx}_dm_{dm}"
-                )
-                alt_data[f"{crit_name}_DM{dm}"] = value
-        
-        alternatives_data.append(alt_data)
-    
-    st.subheader("Criteria Weights")
-    weights_data = []
-    
-    for dm in range(1, num_dms + 1):
-        st.write(f"### DM{dm} Weight Evaulations")
-        dm_data = {"Decision Makers": f"DM{dm}"}
-        
-        for crit_idx, crit_name in enumerate(criteria_names):
-            weight = st.selectbox(
-                f"{crit_name} Weight:",
-                options=list(weight_linguistic_vars.keys()),
-                key=f"weight_dm_{dm}_crit_{crit_idx}"
+st.subheader("Alternative Names")
+alternative_names = []
+for i in range(num_alternatives):
+    name = st.text_input(f"Alternative {i+1} Name:", key=f"alt_name_{i}")
+    if not name:
+        name = f"A{i+1}"  # default isim ver
+    alternative_names.append(name)
+
+
+st.subheader("Criteria Names")
+criteria_names = []
+criteria_types = {}
+for i in range(num_criteria):
+    crit_code = f"C{i+1}"
+    criteria_names.append(crit_code)
+    criteria_types[crit_code] = st.selectbox(
+        f"{crit_code} Type:",
+        options=["Benefit", "Cost"],
+        key=f"crit_type_{i}"
+    )
+
+st.subheader("Alternative Evaluation")
+alternatives_data = []
+for alt_idx, alt_name in enumerate(alternative_names):
+    st.write(f"### {alt_name} Evaluation")
+    alt_data = {"Alternatives": alt_name}
+    for crit_idx in range(num_criteria):
+        crit_code = f"C{crit_idx+1}"
+        for dm in range(1, num_dms + 1):
+            value = st.selectbox(
+                f"{crit_code} - DM{dm} Evaluation:",
+                options=list(alternative_linguistic_vars.keys()),
+                key=f"eval_alt_{alt_idx}_crit_{crit_idx}_dm_{dm}"
             )
-            dm_data[crit_name] = weight
-        
-        weights_data.append(dm_data)
-    
-    if st.button("Calculate", key="calculate_button"):
-        alternatives_df = pd.DataFrame(alternatives_data)
-        weights_df = pd.DataFrame(weights_data)
-        
-        combined_weights = get_combined_weights_df(weights_df, weight_linguistic_vars)
-        
-        st.write("### Alternatives Score")
-        results = mabac(alternatives_df, combined_weights, criteria_types, num_criteria)
+            alt_data[f"{crit_code}_DM{dm}"] = value
+    alternatives_data.append(alt_data)
+
+st.subheader("Criteria Weights")
+weights_data = []
+for dm in range(1, num_dms + 1):
+    st.write(f"### DM{dm} Weight Evaluations")
+    dm_data = {"Decision Makers": f"DM{dm}"}
+    for crit_idx in range(num_criteria):
+        crit_code = f"C{crit_idx+1}"
+        weight = st.selectbox(
+            f"{crit_code} Weight:",
+            options=list(weight_linguistic_vars.keys()),
+            key=f"weight_dm_{dm}_crit_{crit_idx}"
+        )
+        dm_data[crit_code] = weight
+    weights_data.append(dm_data)
+
+if st.button("Calculate", key="calculate_button"):
+    alternatives_df = pd.DataFrame(alternatives_data)
+    weights_df = pd.DataFrame(weights_data)
+
+    st.write("Alternatives DF:")
+    st.dataframe(alternatives_df)
+    st.write("Weights DF:")
+    st.dataframe(weights_df)
+    st.write("Criteria Types:", criteria_types)
+
+    combined_weights = get_numeric_weight_scores(weights_df, weight_linguistic_vars)
+    st.write("Combined Weights:", combined_weights)
+
+    results = mabac(alternatives_df, combined_weights, criteria_types, num_dms)
