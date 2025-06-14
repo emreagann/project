@@ -200,6 +200,11 @@ def calculate_score_from_combined(combined_t2nn_per_criterion):
 
     return total_score / num_criteria if num_criteria > 0 else 0
 
+def calculate_single_score(t2nn):
+    T = t2nn['T_alpha'] + 2 * t2nn['T_beta'] + t2nn['T_gamma']
+    I = t2nn['I_alpha'] + 2 * t2nn['I_beta'] + t2nn['I_gamma']
+    F = t2nn['F_alpha'] + 2 * t2nn['F_beta'] + t2nn['F_gamma']
+    return (1 / 12) * (8 + T - I - F)
 
 
 def calculate_alternative_scores(alternatives_df, criteria, num_dms):
@@ -230,7 +235,7 @@ def transform_alternatives_df(df, num_criteria):
 
 
 
-def normalize_decision_matrix(data, criteria, criteria_types):
+def normalized_decision_matrix(data, criteria, criteria_types):
     normalized_matrix = np.zeros_like(data, dtype=float)
     for j, crit in enumerate(criteria):
         col = data[:, j]
@@ -258,12 +263,10 @@ def weighted_decision_matrix(normalized_matrix, weight_scores, criteria):
 def border_approximation_area(weighted_matrix):
     m = len(weighted_matrix) 
     baa = []
-    epsilon = 1e-12
-    
     for j in range(weighted_matrix.shape[1]): 
         product = 1
         for i in range(m): 
-            product *= (weighted_matrix[i, j] + epsilon)
+            product *= (weighted_matrix[i, j])
         baa.append(product ** (1/m))  
     return baa
 
@@ -288,7 +291,7 @@ def mabac(alternatives_df, combined_weights, criteria_types, num_criteria, num_d
     tif_df = generate_tif_table(alternatives_df, criteria, num_dms)
     st.dataframe(tif_df.style.format("{:.2f}"))
 
-    st.subheader("Criteria Weights")
+    st.subheader("Criteria Weights(Score Values)")
     for crit, val in combined_weights.items():
         st.write(f"{crit}: {val:.4f}")
 
@@ -302,8 +305,8 @@ def mabac(alternatives_df, combined_weights, criteria_types, num_criteria, num_d
                 st.warning(f"{alternatives[idx]} / {crit} not founded.")
                 row_data.append(0)
                 continue
-            single_crit = {crit: combined_values[crit]}
-            score = calculate_score_from_combined(single_crit)
+            score = calculate_single_score(combined_values[crit])
+
             st.write(f"{alternatives[idx]} / {crit}: {score:.4f}")
             row_data.append(score)
         data.append(row_data)
@@ -312,8 +315,8 @@ def mabac(alternatives_df, combined_weights, criteria_types, num_criteria, num_d
 
 
   
-    st.write("### Step 1: Normalize the Decision Matrix")
-    normalized_matrix = normalize_decision_matrix(data, criteria, criteria_types)
+    st.write("### Step 1: Normalized the Decision Matrix")
+    normalized_matrix = normalized_decision_matrix(data, criteria, criteria_types)
     normalized_df = pd.DataFrame(normalized_matrix, index=alternatives, columns=criteria)
     st.dataframe(normalized_df)
 
@@ -326,6 +329,7 @@ def mabac(alternatives_df, combined_weights, criteria_types, num_criteria, num_d
     weighted_matrix = weighted_decision_matrix(normalized_matrix, combined_weights, criteria)
     weighted_df = pd.DataFrame(weighted_matrix, index=alternatives, columns=criteria)
     st.dataframe(weighted_df)
+
 
     st.write("### Step 3: Border Approximation Area (BAA)")
     baa = border_approximation_area(weighted_matrix)
