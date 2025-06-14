@@ -395,8 +395,10 @@ else:
     st.subheader("Alternative Names")
     alternative_names = []
     for i in range(num_alternatives):
-        name = st.text_input(f"Alternative {i+1} Name:", key=f"alt_name_{i}")
-        alternative_names.append(name)
+        name = st.text_input(f"Alternative {i+1} Name:", key=f"alt_name_{i}").strip()
+        if name:
+            alternative_names.append(name)
+
     
 
     st.subheader("Criteria Names")
