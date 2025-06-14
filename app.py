@@ -291,12 +291,12 @@ def mabac(alternatives_df, combined_weights, criteria_types, num_criteria):
     st.write("### T-I-F (Truth-Indeterminacy-Falsity) Values")
     tif_df = generate_tif_table(alternatives_df, criteria, 4)  
     st.dataframe(tif_df.style.format("{:.2f}"))
-    st.subheader("🎯 Kriter Ağırlıkları (Skor Formatında)")
+    st.subheader("🎯 Criteria Weights")
     for crit, val in combined_weights.items():
         st.write(f"{crit}: {val:.4f}")
 
     data = []
-    st.subheader("📊 Ham skor matrisi")
+    st.subheader("📊 Raw Alternative Values")
     for idx, row in alternatives_df.iterrows():
         combined_values = combine_alternativevalues_full(row, criteria, 4)
         row_data = []
@@ -313,7 +313,7 @@ def mabac(alternatives_df, combined_weights, criteria_types, num_criteria):
     normalized_df = pd.DataFrame(normalized_matrix, index=alternatives, columns=criteria)
     st.dataframe(normalized_df)
     combined_weights = normalize_weights(combined_weights)
-    st.subheader("📐 Normalize Edilmiş Ağırlıklar")
+    st.subheader("📐 Normalized Weights")
     for crit, val in combined_weights.items():
         st.write(f"{crit}: {val:.4f}")
 
