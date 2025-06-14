@@ -353,44 +353,44 @@ def get_criteria_from_excel(df):
      return criteria_columns
 if input_method == "Upload your Excel File":
     uploaded_file = st.file_uploader("Upload your Excel File", type=["xlsx", "xls"])
-    
+
     if uploaded_file is not None:
         df = pd.read_excel(uploaded_file, sheet_name=None)
+
         alternatives_df = df['Alternatives']
         criteria_columns = get_criteria_from_excel(alternatives_df)
         num_criteria = len(criteria_columns)
         alternatives_df = transform_alternatives_df(alternatives_df, num_criteria)
         alternatives = alternatives_df['Alternatives'].tolist()
 
+        criteria_names = [col.split('_DM')[0] for col in alternatives_df.columns if '_DM' in col]
+        criteria_names = list(dict.fromkeys(criteria_names))  # tekrarı çıkar
+        num_dms = len([col for col in alternatives_df.columns if '_DM' in col]) // len(criteria_names)
+
         if 'Weights' in df:
             weights_df = df['Weights']
-            criteria = [col.strip() for col in weights_df.columns if col not in ['Decision Makers'] and not col.startswith('Unnamed')]
-            criteria_types = {}
-            for idx, crit in enumerate(criteria):
-                crit = crit.strip()
-                unique_key = f"type_{crit}_{idx}_{hash(crit)}"
-                criteria_types[crit] = st.selectbox(
-                    f"{crit} type",
-                    options=["Benefit", "Cost"],
-                    key=unique_key
-                )
-            combined_weights = get_numeric_weight_scores(weights_df, weight_linguistic_vars)
         elif 'Criteria Weights' in df:
             weights_df = df['Criteria Weights']
-            criteria = [col.strip() for col in weights_df.columns if col not in ['Decision Makers'] and not col.startswith('Unnamed')]
-            criteria_types = {}
-            for idx, crit in enumerate(criteria):
-                crit = crit.strip()
-                unique_key = f"type_{crit}_{idx}_{hash(crit)}"
-                criteria_types[crit] = st.selectbox(
-                    f"{crit} criteria type",
-                    options=["Benefit", "Cost"],
-                    key=unique_key
-                )
-            combined_weights = get_numeric_weight_scores(weights_df, weight_linguistic_vars)
-        
+        else:
+            st.error("Excel dosyasında 'Weights' veya 'Criteria Weights' sayfası bulunamadı.")
+            st.stop()
+
+        criteria = [col.strip() for col in weights_df.columns if col not in ['Decision Makers'] and not col.startswith('Unnamed')]
+        criteria_types = {}
+        for idx, crit in enumerate(criteria):
+            crit = crit.strip()
+            unique_key = f"type_{crit}_{idx}_{hash(crit)}"
+            criteria_types[crit] = st.selectbox(
+                f"{crit} type",
+                options=["Benefit", "Cost"],
+                key=unique_key
+            )
+
+        combined_weights = get_numeric_weight_scores(weights_df, weight_linguistic_vars)
+
         st.write("Results")
-        results = mabac(alternatives_df, combined_weights, criteria_types, num_criteria)
+        results = mabac(alternatives_df, combined_weights, criteria_types, num_criteria, num_dms, criteria_names)
+
 
 else:
     st.subheader("Manual Data Enterence")
