@@ -303,7 +303,7 @@ def mabac(alternatives_df, combined_weights, criteria_types, num_criteria):
         for crit in criteria:
             single_crit = {crit: combined_values[crit]}
             score = calculate_score_from_combined(single_crit)
-            st.write(f"🔢 {alternatives[idx]} / {crit} skoru: {score:.4f}")
+            st.write(f"🔢 {alternatives[idx]} / {crit}: {score:.4f}")
             row_data.append(score)
         data.append(row_data)
     data = np.array(data)
