@@ -258,7 +258,7 @@ def weighted_decision_matrix(normalized_matrix, weight_scores, criteria):
 def border_approximation_area(weighted_matrix):
     m = len(weighted_matrix) 
     baa = []
-    epsilon = 1e-10 
+    epsilon = 1e-12
     
     for j in range(weighted_matrix.shape[1]): 
         product = 1
