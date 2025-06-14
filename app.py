@@ -279,13 +279,13 @@ def mabac_score(distance_matrix):
     return scores
 
 
-def mabac(alternatives_df, combined_weights, criteria_types, num_criteria):
+def mabac(alternatives_df, combined_weights, criteria_types, num_criteria,num_dms):
     alternatives = alternatives_df['Alternatives'].tolist()
     criteria = [f'C{i}' for i in range(1, num_criteria + 1)]
     m = len(alternatives)
     n = len(criteria)
     st.write("### T-I-F (Truth-Indeterminacy-Falsity) Values")
-    tif_df = generate_tif_table(alternatives_df, criteria, 4)  
+    tif_df = generate_tif_table(alternatives_df, criteria,num_dms)  
     st.dataframe(tif_df.style.format("{:.2f}"))
     st.subheader("🎯Criteria Weights")
     for crit, val in combined_weights.items():
