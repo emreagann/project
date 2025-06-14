@@ -236,7 +236,7 @@ def normalize_decision_matrix(data, criteria, criteria_types):
         col = data[:, j]
         min_val = col.min()
         max_val = col.max()
-        elif criteria_types[crit] == 'Benefit':
+        if criteria_types[crit] == 'Benefit':
             normalized_matrix[:, j] = (col - min_val) / (max_val - min_val)
         else:
             normalized_matrix[:, j] = (max_val - col) / (max_val - min_val)
