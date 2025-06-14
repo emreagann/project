@@ -456,4 +456,4 @@ else:
         combined_weights = get_numeric_weight_scores(weights_df, weight_linguistic_vars)
 
         st.write("### Alternatives Score")
-        results = mabac(alternatives_df, combined_weights, criteria_types, num_criteria)
+        results = mabac(alternatives_df, combined_weights, criteria_types, num_criteria,num_dms)
