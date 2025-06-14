@@ -166,17 +166,14 @@ def combine_alternativevalues_full(row, criteria, num_dms):
 def combine_two_t2nn(t1, t2):
     result = {}
 
-    # T bileşeni (Truth)
     result["T_alpha"] = t1["T_alpha"] + t2["T_alpha"] - (t1["T_alpha"] * t2["T_alpha"])
     result["T_beta"] = t1["T_beta"] * t2["T_beta"]
     result["T_gamma"] = t1["T_gamma"] * t2["T_gamma"]
 
-    # I bileşeni (Indeterminacy)
     result["I_alpha"] = t1["I_alpha"] * t2["I_alpha"]
     result["I_beta"] = t1["I_beta"] * t2["I_beta"]
     result["I_gamma"] = t1["I_gamma"] * t2["I_gamma"]
 
-    # F bileşeni (Falsity)
     result["F_alpha"] = t1["F_alpha"] * t2["F_alpha"]
     result["F_beta"] = t1["F_beta"] * t2["F_beta"]
     result["F_gamma"] = t1["F_gamma"] * t2["F_gamma"]
@@ -251,7 +248,7 @@ def weighted_decision_matrix(normalized_matrix, weight_scores, criteria):
     weighted_matrix = np.zeros_like(normalized_matrix, dtype=float)
     for i, alt in enumerate(normalized_matrix):
         for j, crit in enumerate(criteria):
-            weight = weight_scores[crit]  # artık sadece tek skor
+            weight = weight_scores[crit] 
             weighted_matrix[i, j] = normalized_matrix[i, j] * weight
     return weighted_matrix
 
@@ -260,12 +257,11 @@ def weighted_decision_matrix(normalized_matrix, weight_scores, criteria):
 def border_approximation_area(weighted_matrix):
     m = len(weighted_matrix) 
     baa = []
-    epsilon = 1e-10  # Small value to avoid zeros
+    epsilon = 1e-10 
     
     for j in range(weighted_matrix.shape[1]): 
         product = 1
         for i in range(m): 
-            # Add epsilon to avoid zeros
             product *= (weighted_matrix[i, j] + epsilon)
         baa.append(product ** (1/m))  
     return baa
@@ -291,19 +287,19 @@ def mabac(alternatives_df, combined_weights, criteria_types, num_criteria):
     st.write("### T-I-F (Truth-Indeterminacy-Falsity) Values")
     tif_df = generate_tif_table(alternatives_df, criteria, 4)  
     st.dataframe(tif_df.style.format("{:.2f}"))
-    st.subheader("🎯 Criteria Weights")
+    st.subheader("🎯Criteria Weights")
     for crit, val in combined_weights.items():
         st.write(f"{crit}: {val:.4f}")
 
     data = []
-    st.subheader("📊 Raw Alternative Values")
+    st.subheader("📊 Raw Alternative Scores")
     for idx, row in alternatives_df.iterrows():
         combined_values = combine_alternativevalues_full(row, criteria, 4)
         row_data = []
         for crit in criteria:
             single_crit = {crit: combined_values[crit]}
             score = calculate_score_from_combined(single_crit)
-            st.write(f"🔢 {alternatives[idx]} / {crit}: {score:.4f}")
+            st.write(f"🔢 {alternatives[idx]} / {crit} skoru: {score:.4f}")
             row_data.append(score)
         data.append(row_data)
     data = np.array(data)
@@ -313,7 +309,7 @@ def mabac(alternatives_df, combined_weights, criteria_types, num_criteria):
     normalized_df = pd.DataFrame(normalized_matrix, index=alternatives, columns=criteria)
     st.dataframe(normalized_df)
     combined_weights = normalize_weights(combined_weights)
-    st.subheader("📐 Normalized Weights")
+    st.subheader("Normalized Weights")
     for crit, val in combined_weights.items():
         st.write(f"{crit}: {val:.4f}")
 
