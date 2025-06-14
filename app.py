@@ -60,7 +60,7 @@ def generate_tif_table(alternatives_df, criteria_names, num_dms):
     for dm in range(1, num_dms + 1):
         for crit in criteria_names:
             for alt_idx, alt_name in enumerate(alternatives_df['Alternatives']):
-                value = alternatives_df.loc[alt_idx, f"{crit}_DM{dm}"]
+                value = alternatives_df.iloc[alt_idx][f"{crit}_DM{dm}"]
                 alpha, beta, gamma = linguistic_to_numeric(value, alternative_linguistic_vars)
                 
                 tif_df.loc[dm-1, (crit, 'T', 'α')] = alpha[0]
