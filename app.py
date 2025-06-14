@@ -451,7 +451,10 @@ else:
     if st.button("Calculate", key="calculate_button"):
         alternatives_df = pd.DataFrame(alternatives_data)
         weights_df = pd.DataFrame(weights_data)
-        
+        print(alternatives_df)
+        print(alternatives_df.head())
+        print(weights_df)
+        print(weights_df.head())
         combined_weights = get_numeric_weight_scores(weights_df, weight_linguistic_vars)
 
         st.write("### Alternatives Score")
