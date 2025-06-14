@@ -364,7 +364,7 @@ if input_method == "Upload your Excel File":
         alternatives = alternatives_df['Alternatives'].tolist()
 
         criteria_names = [col.split('_DM')[0] for col in alternatives_df.columns if '_DM' in col]
-        criteria_names = list(dict.fromkeys(criteria_names))  # tekrarı çıkar
+        criteria_names = list(dict.fromkeys(criteria_names)) 
         num_dms = len([col for col in alternatives_df.columns if '_DM' in col]) // len(criteria_names)
 
         if 'Weights' in df:
@@ -372,7 +372,7 @@ if input_method == "Upload your Excel File":
         elif 'Criteria Weights' in df:
             weights_df = df['Criteria Weights']
         else:
-            st.error("Excel dosyasında 'Weights' veya 'Criteria Weights' sayfası bulunamadı.")
+            st.error("Your excel file is empty.")
             st.stop()
 
         criteria = [col.strip() for col in weights_df.columns if col not in ['Decision Makers'] and not col.startswith('Unnamed')]
