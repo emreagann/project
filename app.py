@@ -230,17 +230,20 @@ def transform_alternatives_df(df, num_criteria):
 
 
 
-def normalize_decision_matrix(data, criteria_types):
+def normalize_decision_matrix(data, criteria, criteria_types):
     normalized_matrix = np.zeros_like(data, dtype=float)
-    for j, crit in enumerate(criteria_types):
+    for j, crit in enumerate(criteria):
         col = data[:, j]
         min_val = col.min()
         max_val = col.max()
-        if criteria_types[crit] == 'Benefit':
+        if max_val == min_val:
+            normalized_matrix[:, j] = 0  # Bölünemezlik önlemi
+        elif criteria_types[crit] == 'Benefit':
             normalized_matrix[:, j] = (col - min_val) / (max_val - min_val)
         else:
             normalized_matrix[:, j] = (max_val - col) / (max_val - min_val)
     return normalized_matrix
+
 
 
 
@@ -279,14 +282,14 @@ def mabac_score(distance_matrix):
     return scores
 
 
-def mabac(alternatives_df, combined_weights, criteria_types, num_criteria,num_dms):
+def mabac(alternatives_df, combined_weights, criteria_types, num_criteria, num_dms, criteria_names):
     alternatives = alternatives_df['Alternatives'].tolist()
-    criteria = [f'C{i}' for i in range(1, num_criteria + 1)]
-    m = len(alternatives)
-    n = len(criteria)
+    criteria = criteria_names
+
     st.write("### T-I-F (Truth-Indeterminacy-Falsity) Values")
-    tif_df = generate_tif_table(alternatives_df, criteria,num_dms)  
+    tif_df = generate_tif_table(alternatives_df, criteria, num_dms)
     st.dataframe(tif_df.style.format("{:.2f}"))
+
     st.subheader("Criteria Weights")
     for crit, val in combined_weights.items():
         st.write(f"{crit}: {val:.4f}")
@@ -294,20 +297,28 @@ def mabac(alternatives_df, combined_weights, criteria_types, num_criteria,num_dm
     data = []
     st.subheader("Raw Alternative Scores")
     for idx, row in alternatives_df.iterrows():
-        combined_values = combine_alternativevalues_full(row, criteria, 4)
+        combined_values = combine_alternativevalues_full(row, criteria, num_dms)
         row_data = []
         for crit in criteria:
+            if crit not in combined_values:
+                st.warning(f"{alternatives[idx]} / {crit} için değer bulunamadı.")
+                row_data.append(0)
+                continue
             single_crit = {crit: combined_values[crit]}
             score = calculate_score_from_combined(single_crit)
             st.write(f"{alternatives[idx]} / {crit}: {score:.4f}")
             row_data.append(score)
         data.append(row_data)
+
     data = np.array(data)
 
+
+  
     st.write("### Step 1: Normalize the Decision Matrix")
-    normalized_matrix = normalize_decision_matrix(data, criteria_types)
+    normalized_matrix = normalize_decision_matrix(data, criteria, criteria_types)
     normalized_df = pd.DataFrame(normalized_matrix, index=alternatives, columns=criteria)
     st.dataframe(normalized_df)
+
     combined_weights = normalize_weights(combined_weights)
     st.subheader("Normalized Weights")
     for crit, val in combined_weights.items():
@@ -317,16 +328,17 @@ def mabac(alternatives_df, combined_weights, criteria_types, num_criteria,num_dm
     weighted_matrix = weighted_decision_matrix(normalized_matrix, combined_weights, criteria)
     weighted_df = pd.DataFrame(weighted_matrix, index=alternatives, columns=criteria)
     st.dataframe(weighted_df)
-    
+
     st.write("### Step 3: Border Approximation Area (BAA)")
     baa = border_approximation_area(weighted_matrix)
     baa_df = pd.DataFrame([baa], columns=criteria, index=['BAA'])
     st.dataframe(baa_df)
+
     st.write("### Step 4: Distance Matrix")
     dist_matrix = distance_matrix(weighted_matrix, baa)
     dist_df = pd.DataFrame(dist_matrix, index=alternatives, columns=criteria)
     st.dataframe(dist_df)
-    
+
     st.write("### Step 5: MABAC Scores")
     scores = mabac_score(dist_matrix)
     result_df = pd.DataFrame({'Alternative': alternatives, 'Score': scores})
@@ -335,7 +347,6 @@ def mabac(alternatives_df, combined_weights, criteria_types, num_criteria,num_dm
     st.dataframe(result_df)
 
     return result_df
-
 st.title("T2NN Mabac Calculation System")
 
 input_method = st.radio("Select a Enterence:", ["Upload your Excel File", "Manual Enterence"])
@@ -450,10 +461,10 @@ else:
         
         weights_data.append(dm_data)
     
-    if st.button("Calculate", key="calculate_button"):
-        alternatives_df = pd.DataFrame(alternatives_data)
-        weights_df = pd.DataFrame(weights_data)
-        combined_weights = get_numeric_weight_scores(weights_df, weight_linguistic_vars)
+   if st.button("Calculate", key="calculate_button"):
+    alternatives_df = pd.DataFrame(alternatives_data)
+    weights_df = pd.DataFrame(weights_data)
+    combined_weights = get_numeric_weight_scores(weights_df, weight_linguistic_vars)
 
-        st.write("### Alternatives Score")
-        results = mabac(alternatives_df, combined_weights, criteria_types, num_criteria,num_dms)
+    st.write("### Alternatives Score")
+    results = mabac(alternatives_df, combined_weights, criteria_types, num_criteria, num_dms, criteria_names)
