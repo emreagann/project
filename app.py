@@ -360,12 +360,16 @@ def mabac(alternatives_df, combined_weights, criteria_types, num_dms):
 st.title("T2NN Mabac Calculation System")
 
 input_method = st.radio("Select a Enterence:", ["Upload your Excel File", "Manual Enterence"])
+alternatives_df = None
+weights_df = None
+criteria_types = {}
+combined_weights = {}
 def get_criteria_from_excel(df):
      criteria_columns = [col for col in df.columns if col.startswith('C')]
      return criteria_columns
 if input_method == "Upload your Excel File":
     uploaded_file = st.file_uploader("Upload your Excel File", type=["xlsx", "xls"])
-    
+
     if uploaded_file is not None:
         df = pd.read_excel(uploaded_file, sheet_name=None)
         alternatives_df = df['Alternatives']
@@ -376,104 +380,76 @@ if input_method == "Upload your Excel File":
 
         if 'Weights' in df:
             weights_df = df['Weights']
-            criteria = [col.strip() for col in weights_df.columns if col not in ['Decision Makers'] and not col.startswith('Unnamed')]
-            criteria_types = {}
-            for idx, crit in enumerate(criteria):
-                crit = crit.strip()
-                unique_key = f"type_{crit}_{idx}_{hash(crit)}"
-                criteria_types[crit] = st.selectbox(
-                    f"{crit} type",
-                    options=["Benefit", "Cost"],
-                    key=unique_key
-                )
-            combined_weights = get_numeric_weight_scores(weights_df, weight_linguistic_vars)
         elif 'Criteria Weights' in df:
             weights_df = df['Criteria Weights']
-            criteria = [col.strip() for col in weights_df.columns if col not in ['Decision Makers'] and not col.startswith('Unnamed')]
-            criteria_types = {}
-            for idx, crit in enumerate(criteria):
-                crit = crit.strip()
-                unique_key = f"type_{crit}_{idx}_{hash(crit)}"
-                criteria_types[crit] = st.selectbox(
-                    f"{crit} criteria type",
-                    options=["Benefit", "Cost"],
-                    key=unique_key
-                )
-            combined_weights = get_numeric_weight_scores(weights_df, weight_linguistic_vars)
         
-        st.write("Results")
-        results = mabac(alternatives_df, combined_weights, criteria_types, num_criteria)
-
-else:
-   st.subheader("Manual Data Enterence")
-
-num_alternatives = st.number_input("Alternative Number:", min_value=2, value=3, key="num_alternatives")
-num_criteria = st.number_input("Criteria Number:", min_value=2, value=2, key="num_criteria")
-num_dms = st.number_input("Decision Maker Number:", min_value=1, value=4, key="num_dms")
-
-st.subheader("Alternative Names")
-alternative_names = []
-for i in range(num_alternatives):
-    name = st.text_input(f"Alternative {i+1} Name:", key=f"alt_name_{i}")
-    if not name:
-        name = f"A{i+1}"  # default isim ver
-    alternative_names.append(name)
-
-
-st.subheader("Criteria Names")
-criteria_names = []
-criteria_types = {}
-for i in range(num_criteria):
-    crit_code = f"C{i+1}"
-    criteria_names.append(crit_code)
-    criteria_types[crit_code] = st.selectbox(
-        f"{crit_code} Type:",
-        options=["Benefit", "Cost"],
-        key=f"crit_type_{i}"
-    )
-
-st.subheader("Alternative Evaluation")
-alternatives_data = []
-for alt_idx, alt_name in enumerate(alternative_names):
-    st.write(f"### {alt_name} Evaluation")
-    alt_data = {"Alternatives": alt_name}
-    for crit_idx in range(num_criteria):
-        crit_code = f"C{crit_idx+1}"
-        for dm in range(1, num_dms + 1):
-            value = st.selectbox(
-                f"{crit_code} - DM{dm} Evaluation:",
-                options=list(alternative_linguistic_vars.keys()),
-                key=f"eval_alt_{alt_idx}_crit_{crit_idx}_dm_{dm}"
+        criteria = [col.strip() for col in weights_df.columns if col not in ['Decision Makers'] and not col.startswith('Unnamed')]
+        for idx, crit in enumerate(criteria):
+            criteria_types[crit] = st.selectbox(
+                f"{crit} type",
+                options=["Benefit", "Cost"],
+                key=f"crit_excel_{idx}"
             )
-            alt_data[f"{crit_code}_DM{dm}"] = value
-    alternatives_data.append(alt_data)
+        combined_weights = get_numeric_weight_scores(weights_df, weight_linguistic_vars)
 
-st.subheader("Criteria Weights")
-weights_data = []
-for dm in range(1, num_dms + 1):
-    st.write(f"### DM{dm} Weight Evaluations")
-    dm_data = {"Decision Makers": f"DM{dm}"}
-    for crit_idx in range(num_criteria):
-        crit_code = f"C{crit_idx+1}"
-        weight = st.selectbox(
-            f"{crit_code} Weight:",
-            options=list(weight_linguistic_vars.keys()),
-            key=f"weight_dm_{dm}_crit_{crit_idx}"
+
+elif input_method == "Manual Enterence":
+    num_alternatives = st.number_input("Alternative Number:", min_value=2, value=3, key="num_alternatives")
+    num_criteria = st.number_input("Criteria Number:", min_value=2, value=2, key="num_criteria")
+    num_dms = st.number_input("Decision Maker Number:", min_value=1, value=4, key="num_dms")
+
+    st.subheader("Alternative Names")
+    alternative_names = []
+    for i in range(num_alternatives):
+        name = st.text_input(f"Alternative {i+1} Name:", key=f"alt_name_{i}")
+        if not name:
+            name = f"A{i+1}"
+        alternative_names.append(name)
+
+    st.subheader("Criteria Names")
+    criteria_names = []
+    for i in range(num_criteria):
+        crit_code = f"C{i+1}"
+        criteria_names.append(crit_code)
+        criteria_types[crit_code] = st.selectbox(
+            f"{crit_code} Type:",
+            options=["Benefit", "Cost"],
+            key=f"crit_type_{i}"
         )
-        dm_data[crit_code] = weight
-    weights_data.append(dm_data)
 
-if st.button("Calculate", key="calculate_button"):
-    alternatives_df = pd.DataFrame(alternatives_data)
-    weights_df = pd.DataFrame(weights_data)
+    st.subheader("Alternative Evaluation")
+    alternatives_data = []
+    for alt_idx, alt_name in enumerate(alternative_names):
+        st.write(f"### {alt_name} Evaluation")
+        alt_data = {"Alternatives": alt_name}
+        for crit_idx in range(num_criteria):
+            crit_code = f"C{crit_idx+1}"
+            for dm in range(1, num_dms + 1):
+                value = st.selectbox(
+                    f"{crit_code} - DM{dm} Evaluation:",
+                    options=list(alternative_linguistic_vars.keys()),
+                    key=f"eval_alt_{alt_idx}_crit_{crit_idx}_dm_{dm}"
+                )
+                alt_data[f"{crit_code}_DM{dm}"] = value
+        alternatives_data.append(alt_data)
 
-    st.write("Alternatives DF:")
-    st.dataframe(alternatives_df)
-    st.write("Weights DF:")
-    st.dataframe(weights_df)
-    st.write("Criteria Types:", criteria_types)
+    st.subheader("Criteria Weights")
+    weights_data = []
+    for dm in range(1, num_dms + 1):
+        st.write(f"### DM{dm} Weight Evaluations")
+        dm_data = {"Decision Makers": f"DM{dm}"}
+        for crit_idx in range(num_criteria):
+            crit_code = f"C{crit_idx+1}"
+            weight = st.selectbox(
+                f"{crit_code} Weight:",
+                options=list(weight_linguistic_vars.keys()),
+                key=f"weight_dm_{dm}_crit_{crit_idx}"
+            )
+            dm_data[crit_code] = weight
+        weights_data.append(dm_data)
 
-    combined_weights = get_numeric_weight_scores(weights_df, weight_linguistic_vars)
-    st.write("Combined Weights:", combined_weights)
-
-    results = mabac(alternatives_df, combined_weights, criteria_types, num_dms)
+    if st.button("Calculate", key="calculate_button"):
+        alternatives_df = pd.DataFrame(alternatives_data)
+        weights_df = pd.DataFrame(weights_data)
+        combined_weights = get_numeric_weight_scores(weights_df, weight_linguistic_vars)
+        results = mabac(alternatives_df, combined_weights, criteria_types, num_dms)
